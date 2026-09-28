@@ -98,7 +98,11 @@ class ClienteAzureDevOps:
             f"/_apis/wit/workitems/${tipo}?api-version={_VERSAO_API}"
         )
         resposta = self._executar(
-            "POST", url, corpo=operacoes, content_type="application/json-patch+json", retentavel=False
+            "POST",
+            url,
+            corpo=operacoes,
+            content_type="application/json-patch+json",
+            retentavel=False,
         )
         return self._verificar_e_decodificar(resposta, None)
 
@@ -154,6 +158,7 @@ class ClienteAzureDevOps:
                         f"(HTTP {resposta.status_code}) após {_MAX_TENTATIVAS} tentativas."
                     )
             time.sleep(self._espera_inicial * (2**tentativa))
+        raise ErroFalhaTransitoria(f"A chamada {metodo} {url} não se completou.")
 
     def _verificar_e_decodificar(
         self, resposta: httpx.Response, work_item_id: int | None
