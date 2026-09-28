@@ -5,15 +5,12 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-_SECAO = re.compile(
-    r"^## Lacunas e perguntas abertas\s*\n(?P<corpo>.*?)(?=\n## |\Z)",
-    re.MULTILINE | re.DOTALL,
-)
+_TITULO_SECAO = "## Lacunas e perguntas abertas"
 _ITEM_ROTULADO = re.compile(
     r"^- \*\*(?P<id>\w+) · (?P<audiencia>Negócio|Técnico)\*\* — (?P<pergunta>.+)$"
 )
 _ITEM_SIMPLES = re.compile(r"^- (?P<pergunta>.+)$")
-_EVIDENCIA = re.compile(r"^\s*<!--\s*evidência:\s*(?P<evidencia>.+?)\s*-->\s*$")
+_EVIDENCIA = re.compile(r"^\s*<!--\s*evidência:(?P<evidencia>.+?)-->\s*$")
 _ITEM_AMBIGUO = re.compile(r"^- \*\*[^*]*\*\*")
 
 
@@ -33,19 +30,47 @@ class Lacuna:
     evidencia: str | None
 
 
+def _corpo_secao_lacunas(spec_md: str) -> str | None:
+    """Isola o corpo de `## Lacunas e perguntas abertas`, até a próxima seção ou o fim.
+
+    Escrito como varredura de linhas, não regex: um `.*?` reluctant seguido de um limite que
+    também casa string vazia (fim de arquivo) dispara alertas de regex mal-comportada (Sonar
+    python:S6019 e python:S8786) sem trazer nenhum ganho sobre a varredura direta.
+    """
+    linhas = spec_md.splitlines()
+    inicio: int | None = None
+    for indice, linha in enumerate(linhas):
+        if linha.rstrip() == _TITULO_SECAO:
+            inicio = indice + 1
+            break
+    if inicio is None:
+        return None
+    corpo: list[str] = []
+    for linha in linhas[inicio:]:
+        if linha.startswith("## "):
+            break
+        corpo.append(linha)
+    return "\n".join(corpo)
+
+
+def _fechar_pendente(
+    lacunas: list[Lacuna], pendente: dict[str, str | None] | None
+) -> None:
+    if pendente is not None:
+        lacunas.append(Lacuna(**pendente))  # type: ignore[arg-type]
+
+
 def ler_lacunas(spec_md: str) -> list[Lacuna]:
     """Extrai cada lacuna da seção, na ordem em que aparece no documento."""
-    secao = _SECAO.search(spec_md)
-    if secao is None:
+    corpo = _corpo_secao_lacunas(spec_md)
+    if corpo is None:
         return []
-    linhas = secao.group("corpo").splitlines()
     lacunas: list[Lacuna] = []
     pendente: dict[str, str | None] | None = None
-    for linha in linhas:
+    for linha in corpo.splitlines():
         rotulado = _ITEM_ROTULADO.match(linha)
         if rotulado:
-            if pendente is not None:
-                lacunas.append(Lacuna(**pendente))  # type: ignore[arg-type]
+            _fechar_pendente(lacunas, pendente)
             pendente = {
                 "id": rotulado.group("id"),
                 "audiencia": rotulado.group("audiencia"),
@@ -53,28 +78,24 @@ def ler_lacunas(spec_md: str) -> list[Lacuna]:
                 "evidencia": None,
             }
             continue
-        ambiguo = _ITEM_AMBIGUO.match(linha)
-        if ambiguo:
+        if _ITEM_AMBIGUO.match(linha):
             raise ErroLacunaAmbigua(
                 f"Lacuna parece rotulada mas não segue o padrão exato: {linha}"
             )
         evidencia = _EVIDENCIA.match(linha)
         if evidencia and pendente is not None:
-            pendente["evidencia"] = evidencia.group("evidencia")
+            pendente["evidencia"] = evidencia.group("evidencia").strip()
             continue
         simples = _ITEM_SIMPLES.match(linha)
         if simples:
-            if pendente is not None:
-                lacunas.append(Lacuna(**pendente))  # type: ignore[arg-type]
-                pendente = None
+            _fechar_pendente(lacunas, pendente)
             pendente = {
                 "id": None,
                 "audiencia": None,
                 "pergunta": simples.group("pergunta").strip(),
                 "evidencia": None,
             }
-    if pendente is not None:
-        lacunas.append(Lacuna(**pendente))  # type: ignore[arg-type]
+    _fechar_pendente(lacunas, pendente)
     return lacunas
 
 

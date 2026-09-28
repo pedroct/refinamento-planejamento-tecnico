@@ -1,5 +1,3 @@
-from typing import Any
-
 import pytest
 
 from refinar_tecnicamente.gravar_spec_tecnica import (
@@ -21,7 +19,8 @@ class ClienteFalso:
 
 def test_converte_markdown_simples() -> None:
     html = converter_para_html("# Título\n\nParágrafo com **negrito**.\n")
-    assert "<h1>" in html and "</h1>" in html
+    assert "<h1>" in html
+    assert "</h1>" in html
     assert "<strong>negrito</strong>" in html
 
 

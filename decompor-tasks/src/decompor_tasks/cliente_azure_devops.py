@@ -124,23 +124,30 @@ class ClienteAzureDevOps:
         retentavel: bool = True,
     ) -> httpx.Response:
         headers = {"Content-Type": content_type} if content_type else None
-
-        # Para operações não-retentáveis (escritas), uma única tentativa sem retry
         if not retentavel:
-            try:
-                resposta = self._cliente.request(metodo, url, json=corpo, headers=headers)
-            except httpx.RequestError as erro:
-                raise ErroFalhaTransitoria(
-                    f"A chamada {metodo} {url} falhou por erro de rede."
-                ) from erro
-            if resposta.status_code in _ERROS_RETENTAVEIS:
-                raise ErroFalhaTransitoria(
-                    f"A chamada {metodo} {url} não se completou "
-                    f"(HTTP {resposta.status_code})."
-                )
-            return resposta
+            return self._executar_sem_retry(metodo, url, corpo, headers)
+        return self._executar_com_retry(metodo, url, corpo, headers)
 
-        # Para operações retentáveis (leituras), retry com backoff
+    def _executar_sem_retry(
+        self, metodo: str, url: str, corpo: Any, headers: dict[str, str] | None
+    ) -> httpx.Response:
+        """Uma única tentativa sem retry automático, para operações não-retentáveis (escritas)."""
+        try:
+            resposta = self._cliente.request(metodo, url, json=corpo, headers=headers)
+        except httpx.RequestError as erro:
+            raise ErroFalhaTransitoria(
+                f"A chamada {metodo} {url} falhou por erro de rede."
+            ) from erro
+        if resposta.status_code in _ERROS_RETENTAVEIS:
+            raise ErroFalhaTransitoria(
+                f"A chamada {metodo} {url} não se completou (HTTP {resposta.status_code})."
+            )
+        return resposta
+
+    def _executar_com_retry(
+        self, metodo: str, url: str, corpo: Any, headers: dict[str, str] | None
+    ) -> httpx.Response:
+        """Retry com backoff exponencial, para operações retentáveis (leituras)."""
         for tentativa in range(_MAX_TENTATIVAS):
             try:
                 resposta = self._cliente.request(metodo, url, json=corpo, headers=headers)

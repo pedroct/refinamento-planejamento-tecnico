@@ -46,27 +46,26 @@ def test_tudo_presente_nao_levanta_erro() -> None:
 
 
 def test_sem_spec_tecnica_nomeia_a_lacuna() -> None:
+    tasks = [_task_estimada("Task A")]
     with pytest.raises(ErroSuficienciaInsuficiente, match="spec técnica"):
-        verificar_suficiencia(
-            spec_tecnica=None, criterios_aceitacao="<p>x</p>", tasks=[_task_estimada("Task A")]
-        )
+        verificar_suficiencia(spec_tecnica=None, criterios_aceitacao="<p>x</p>", tasks=tasks)
 
 
 def test_sem_spec_tecnica_nomeia_o_campo_configurado_quando_customizado() -> None:
+    tasks = [_task_estimada("Task A")]
     with pytest.raises(ErroSuficienciaInsuficiente, match="Custom.OutroCampo"):
         verificar_suficiencia(
             spec_tecnica=None,
             criterios_aceitacao="<p>x</p>",
-            tasks=[_task_estimada("Task A")],
+            tasks=tasks,
             campo_spec_tecnica="Custom.OutroCampo",
         )
 
 
 def test_sem_criterios_de_aceitacao_nomeia_a_lacuna() -> None:
+    tasks = [_task_estimada("Task A")]
     with pytest.raises(ErroSuficienciaInsuficiente, match="critério de aceitação"):
-        verificar_suficiencia(
-            spec_tecnica="<p>x</p>", criterios_aceitacao=None, tasks=[_task_estimada("Task A")]
-        )
+        verificar_suficiencia(spec_tecnica="<p>x</p>", criterios_aceitacao=None, tasks=tasks)
 
 
 def test_sem_nenhuma_task_nomeia_a_lacuna() -> None:
@@ -75,11 +74,10 @@ def test_sem_nenhuma_task_nomeia_a_lacuna() -> None:
 
 
 def test_task_sem_estimativa_nomeia_o_titulo_dela() -> None:
+    tasks = [_task_estimada("Task A"), _task_sem_estimativa("Task B")]
     with pytest.raises(ErroSuficienciaInsuficiente, match="Task B"):
         verificar_suficiencia(
-            spec_tecnica="<p>x</p>",
-            criterios_aceitacao="<p>x</p>",
-            tasks=[_task_estimada("Task A"), _task_sem_estimativa("Task B")],
+            spec_tecnica="<p>x</p>", criterios_aceitacao="<p>x</p>", tasks=tasks
         )
 
 
@@ -93,18 +91,16 @@ def test_multiplas_lacunas_aparecem_todas_na_mesma_mensagem() -> None:
 
 
 def test_task_com_so_original_estimate_nomeia_a_lacuna() -> None:
+    tasks = [_task_estimada("Task A"), _task_so_original_estimate("Task C")]
     with pytest.raises(ErroSuficienciaInsuficiente, match="Task C"):
         verificar_suficiencia(
-            spec_tecnica="<p>x</p>",
-            criterios_aceitacao="<p>x</p>",
-            tasks=[_task_estimada("Task A"), _task_so_original_estimate("Task C")],
+            spec_tecnica="<p>x</p>", criterios_aceitacao="<p>x</p>", tasks=tasks
         )
 
 
 def test_task_com_so_remaining_work_nomeia_a_lacuna() -> None:
+    tasks = [_task_estimada("Task A"), _task_so_remaining_work("Task D")]
     with pytest.raises(ErroSuficienciaInsuficiente, match="Task D"):
         verificar_suficiencia(
-            spec_tecnica="<p>x</p>",
-            criterios_aceitacao="<p>x</p>",
-            tasks=[_task_estimada("Task A"), _task_so_remaining_work("Task D")],
+            spec_tecnica="<p>x</p>", criterios_aceitacao="<p>x</p>", tasks=tasks
         )

@@ -73,7 +73,8 @@ def test_consulta_filtra_projeto_area_e_estados_fechados() -> None:
     assert cliente.wiql_recebido is not None
     assert "proj" in cliente.wiql_recebido
     assert "proj\\Time A" in cliente.wiql_recebido
-    assert "User Story" in cliente.wiql_recebido and "Bug" in cliente.wiql_recebido
+    assert "User Story" in cliente.wiql_recebido
+    assert "Bug" in cliente.wiql_recebido
     assert "Closed" in cliente.wiql_recebido
 
 

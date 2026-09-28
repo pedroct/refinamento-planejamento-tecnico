@@ -20,7 +20,9 @@ _TASK_B = TaskProposta(titulo="Task B", original_estimate=2.0, remaining=2.0, as
 
 def test_hash_e_estavel_para_o_mesmo_plano() -> None:
     plano = PlanoTasks(historia_id=100, tasks=(_TASK_A, _TASK_B))
-    assert calcular_hash_plano(plano) == calcular_hash_plano(plano)
+    primeiro_calculo = calcular_hash_plano(plano)
+    segundo_calculo = calcular_hash_plano(plano)
+    assert primeiro_calculo == segundo_calculo
 
 
 def test_hash_muda_quando_o_plano_muda() -> None:

@@ -48,7 +48,7 @@ class ClienteFalhaNaSegundaTask:
 
 def test_operacoes_nunca_incluem_story_points() -> None:
     operacoes = montar_operacoes_criacao(
-        historia_id=100, organizacao="org", projeto="proj", tipo_task="Task", task=_TASK_A
+        historia_id=100, organizacao="org", projeto="proj", task=_TASK_A
     )
     caminhos = [op["path"] for op in operacoes]
     assert "/fields/Microsoft.VSTS.Scheduling.StoryPoints" not in caminhos
@@ -59,7 +59,7 @@ def test_operacoes_nunca_incluem_story_points() -> None:
 
 def test_operacoes_incluem_relacao_com_a_historia() -> None:
     operacoes = montar_operacoes_criacao(
-        historia_id=100, organizacao="org", projeto="proj", tipo_task="Task", task=_TASK_A
+        historia_id=100, organizacao="org", projeto="proj", task=_TASK_A
     )
     relacao = next(op for op in operacoes if op["path"] == "/relations/-")
     assert relacao["value"]["rel"] == "System.LinkTypes.Hierarchy-Reverse"

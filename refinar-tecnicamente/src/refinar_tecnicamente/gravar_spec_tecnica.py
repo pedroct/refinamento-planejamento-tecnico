@@ -4,12 +4,9 @@ textual explícita — a única escrita desta skill no Azure Boards."""
 from __future__ import annotations
 
 from html.parser import HTMLParser
-from typing import TYPE_CHECKING, Protocol
+from typing import Protocol
 
 from markdown_it import MarkdownIt
-
-if TYPE_CHECKING:
-    pass
 
 _TAGS_SEM_FECHAMENTO = frozenset({"br", "hr", "img", "input", "meta", "col", "wbr"})
 

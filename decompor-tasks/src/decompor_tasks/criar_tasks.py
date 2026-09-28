@@ -26,7 +26,7 @@ class ErroConfirmacaoInvalida(ValueError):
 
 
 def montar_operacoes_criacao(
-    *, historia_id: int, organizacao: str, projeto: str, tipo_task: str, task: TaskProposta
+    *, historia_id: int, organizacao: str, projeto: str, task: TaskProposta
 ) -> list[dict[str, Any]]:
     """JSON Patch de criação: título, horas, responsável e o vínculo com a História/Bug pai.
     Nunca inclui Story Points — esse campo não existe em Task no processo Agile."""
@@ -79,7 +79,6 @@ def criar_tasks_pendentes(
             historia_id=plano.historia_id,
             organizacao=organizacao,
             projeto=projeto,
-            tipo_task=tipo_task,
             task=task,
         )
         # Grava a marca de "em andamento" ANTES da chamada de criação: se a chamada falhar
