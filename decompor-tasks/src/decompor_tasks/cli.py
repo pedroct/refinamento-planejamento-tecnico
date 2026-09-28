@@ -77,13 +77,25 @@ def _carregar_plano(caminho: str) -> PlanoTasks:
     return PlanoTasks(historia_id=dados["historia_id"], tasks=tasks)
 
 
+def _imprimir_plano(plano: PlanoTasks) -> None:
+    """Mostra o conteúdo exato do plano antes de pedir a frase de autorização, para que a
+    confirmação seja sobre o que de fato será criado — nunca só uma contagem."""
+    print(f"História/Bug #{plano.historia_id} — {len(plano.tasks)} Task(s) no plano:")
+    for task in plano.tasks:
+        print(
+            f"- {task.titulo} | original_estimate={task.original_estimate}h "
+            f"| remaining={task.remaining}h | assigned_to={task.assigned_to}"
+        )
+
+
 def _criar(args: argparse.Namespace, env: Mapping[str, str], entrada: Callable[[str], str]) -> int:
     config = carregar_configuracao(env)
     plano = _carregar_plano(args.plano)
     caminho_manifesto = Path(args.manifesto)
     manifesto_atual = ler_manifesto(caminho_manifesto)
     frase = montar_frase_autorizacao(plano.historia_id)
-    print(f"{len(plano.tasks)} Task(s) no plano. Digite exatamente a frase para confirmar:")
+    _imprimir_plano(plano)
+    print("Digite exatamente a frase para confirmar:")
     print(frase)
     resposta = entrada("> ")
     try:
