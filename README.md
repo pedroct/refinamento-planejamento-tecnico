@@ -89,7 +89,9 @@ preparar-implementacao montar 100
 - **Uma escrita nunca se repete sozinha.** Timeout ou resposta ambígua interrompe com estado bloqueado
   e exige reconciliação manual — nunca invenção nem repetição automática.
 
-## Instalação
+## Instalação e atualização
+
+As skills seguem o formato aberto (`SKILL.md` por pasta) suportado pelo [`npx skills`](https://skills.sh), que instala diretamente a partir deste repositório do GitHub — não é necessário publicar em nenhum registro.
 
 ```bash
 # listar as skills disponíveis
@@ -102,8 +104,68 @@ npx skills add pedroct/refinamento-planejamento-tecnico --all -a claude-code
 npx skills add pedroct/refinamento-planejamento-tecnico --skill decompor-tasks -a claude-code
 ```
 
+A instalação pode ser por projeto (padrão) ou global:
+
+| Escopo | Flag | Onde fica |
+|---|---|---|
+| Projeto | *(nenhuma)* | `./<agente>/skills/` — versionado com o projeto, compartilhado com o time |
+| Global | `-g` | `~/<agente>/skills/` — disponível em qualquer projeto da máquina |
+
+```bash
+# instalar globalmente, disponível em todos os projetos
+npx skills add pedroct/refinamento-planejamento-tecnico --all -a claude-code -g
+```
+
 Cada skill tem seu próprio `.env.example` — copie para `.env` e preencha organização, projeto e
 token do Azure DevOps antes de usar. O token nunca deve ser versionado.
+
+### Atualização
+
+```bash
+# atualizar todas as skills instaladas neste projeto
+npx skills update -y
+
+# atualizar só uma
+npx skills update refinar-tecnicamente -y
+
+# escopo explícito, quando houver instalação nos dois lugares
+npx skills update -p -y   # só as do projeto
+npx skills update -g -y   # só as globais
+
+# ver o que está instalado e de onde veio
+npx skills ls
+```
+
+O `add` grava um `skills-lock.json` na raiz do projeto, com a origem e um hash de cada skill. É
+esse arquivo que o `update` lê para saber de onde re-buscar cada skill — por isso o comando não
+repete o nome do repositório. Ele também **não** aceita `-a/--agent`: descobre sozinho para quais
+agentes a skill está instalada e atualiza todos.
+
+Uma ressalva: o `update` informa `✓ Updated` mesmo quando não havia nada novo a trazer. A mensagem
+confirma que a skill foi ressincronizada com a origem, não que o conteúdo mudou. Para saber se algo
+de fato mudou, compare o `computedHash` no `skills-lock.json` antes e depois.
+
+### `update` não traz skills novas
+
+**O `update` só ressincroniza o que já está no `skills-lock.json`.** Uma skill nova neste
+repositório não é instalada nem mencionada: o comando termina com `✓ Updated N skill(s)` e o
+projeto continua sem ela. Não há aviso.
+
+O comando que traz skills novas é o `add` com curinga:
+
+```bash
+npx skills add pedroct/refinamento-planejamento-tecnico --skill '*' -a '*' -y
+```
+
+Ele é idempotente: repõe o que falta, preserva o que já está instalado e mantém o layout canônico.
+Use-o como sincronização periódica, não o `update`.
+
+Duas armadilhas que motivam a forma exata acima:
+
+| Erro | O que acontece |
+|---|---|
+| `--skill nome1,nome2` | nomes separados por vírgula **não instalam nada**; o comando apenas lista as skills disponíveis |
+| `-a claude-code` em vez de `-a '*'` | instala como **cópia** dentro de `.claude/skills/`, em vez do diretório canônico `.agents/skills/` com symlinks por agente. A cópia fica invisível para os outros agentes e não acompanha as atualizações |
 
 Para desenvolver num pacote isoladamente:
 
