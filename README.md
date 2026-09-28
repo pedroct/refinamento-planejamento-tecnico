@@ -28,6 +28,21 @@ refinamento-planejamento-tecnico
 Cada skill é um pacote Python independente, instalável separadamente, que vendoriza sua própria cópia
 de um cliente HTTP mínimo para o Azure Boards. Nenhuma importa da outra.
 
+### Como rodar os comandos abaixo
+
+Não há binário instalado globalmente — cada skill roda dentro do seu próprio ambiente `uv`. Padrão
+para qualquer comando, de qualquer uma das três skills, a partir da raiz do projeto:
+
+```bash
+export $(grep -v '^#' <pasta-da-skill>/.env | xargs)   # uma vez por sessão de shell — ver Configuração
+uv run --directory <pasta-da-skill> <comando> <argumentos>
+```
+
+`--directory` muda o diretório de trabalho do comando para dentro da pasta da skill — por isso todo
+argumento de arquivo (`spec.md`, `plano.json`, manifesto) precisa ser **caminho absoluto**; um
+caminho relativo seria resolvido dentro da pasta da skill, não do seu projeto. Os blocos abaixo já
+seguem esse padrão; troque só os caminhos e valores pelos da sua Demanda.
+
 ### `refinar-tecnicamente`
 
 Na reunião técnica, sobre a `spec.md` de uma Demanda já publicada:
@@ -40,9 +55,12 @@ Na reunião técnica, sobre a `spec.md` de uma Demanda já publicada:
   textual exata.
 
 ```bash
-refinar-tecnicamente ler-lacunas caminho/para/spec.md
-refinar-tecnicamente sugerir-story-points --area-path "Projeto\\Time A" --tipo "User Story" --tipo Bug
-refinar-tecnicamente gravar-spec-tecnica --demanda 13959 --spec caminho/para/spec.md
+export $(grep -v '^#' refinar-tecnicamente/.env | xargs)
+uv run --directory refinar-tecnicamente refinar-tecnicamente ler-lacunas /caminho/absoluto/para/spec.md
+uv run --directory refinar-tecnicamente refinar-tecnicamente sugerir-story-points \
+  --area-path "Projeto\\Time A" --tipo "User Story" --tipo Bug
+uv run --directory refinar-tecnicamente refinar-tecnicamente gravar-spec-tecnica \
+  --demanda 13959 --spec /caminho/absoluto/para/spec.md
 ```
 
 ### `decompor-tasks`
@@ -56,8 +74,11 @@ No planning, por item, pelo desenvolvedor que vai executá-lo:
   exata e manifesto de retomada — uma reexecução após falha parcial nunca duplica Tasks.
 
 ```bash
-decompor-tasks sugerir-horas --area-path "Projeto\\Time A" --tipo-task Task --titulo "Criar endpoint"
-decompor-tasks criar plano.json --manifesto historia-100.json
+export $(grep -v '^#' decompor-tasks/.env | xargs)
+uv run --directory decompor-tasks decompor-tasks sugerir-horas \
+  --area-path "Projeto\\Time A" --tipo-task Task --titulo "Criar endpoint"
+uv run --directory decompor-tasks decompor-tasks criar \
+  /caminho/absoluto/plano.json --manifesto /caminho/absoluto/historia-100.json
 ```
 
 ### `preparar-implementacao`
@@ -72,7 +93,8 @@ Ao começar a codar, pelo mesmo desenvolvedor:
   `brainstorming`/`writing-plans` — o desenvolvedor leva o briefing a eles, na própria sessão.
 
 ```bash
-preparar-implementacao montar 100
+export $(grep -v '^#' preparar-implementacao/.env | xargs)
+uv run --directory preparar-implementacao preparar-implementacao montar 100
 ```
 
 ## Invariantes
@@ -211,17 +233,19 @@ versionado (já está no `.gitignore`).
 ### 3. Exportar as variáveis antes de rodar os comandos
 
 **Nenhuma das skills lê o `.env` automaticamente.** O `.env` é só um lugar para guardar os valores —
-quem os coloca no ambiente é você, antes de chamar o comando:
+quem os coloca no ambiente é você, antes de chamar o comando (na primeira vez, rode também `uv sync
+--directory <pasta-da-skill>`):
 
 ```bash
-cd refinar-tecnicamente
-uv sync   # só na primeira vez, ou após atualizar dependências
-export $(grep -v '^#' .env | xargs)
-uv run refinar-tecnicamente sugerir-story-points --area-path "Projeto\Time A" --tipo "User Story"
+uv sync --directory refinar-tecnicamente   # só na primeira vez, ou após atualizar dependências
+export $(grep -v '^#' refinar-tecnicamente/.env | xargs)
+uv run --directory refinar-tecnicamente refinar-tecnicamente sugerir-story-points \
+  --area-path "Projeto\\Time A" --tipo "User Story"
 ```
 
-Isso vale para as três skills, sempre a partir da pasta da skill correspondente (cada uma tem seu
-próprio `.env`, então exportar o de uma não configura as outras).
+Isso vale para as três skills, cada uma com seu próprio `.env` — exportar o de uma não configura as
+outras. Veja [Como rodar os comandos abaixo](#como-rodar-os-comandos-abaixo) para o padrão completo
+usado em cada skill.
 
 ## Qualidade de código
 
