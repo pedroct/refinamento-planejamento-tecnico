@@ -37,6 +37,13 @@ class _ValidadorDeAninhamento(HTMLParser):
         if tag not in _TAGS_SEM_FECHAMENTO:
             self._pilha.append(tag)
 
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag not in _TAGS_SEM_FECHAMENTO:
+            # Não-nula tag com auto-fechamento (raro, mas possível)
+            self.handle_starttag(tag, attrs)
+            self.handle_endtag(tag)
+        # Caso contrário (tag sem fechamento): ignorar, é auto-contida
+
     def handle_endtag(self, tag: str) -> None:
         if not self._pilha or self._pilha[-1] != tag:
             raise ErroHtmlInvalido(

@@ -90,3 +90,18 @@ def test_confirmacao_com_espaco_extra_ao_final_ainda_e_aceita() -> None:
         resposta_confirmacao=f"  {frase}  \n",
     )
     assert len(cliente.chamadas) == 1
+
+
+def test_aceita_markdown_com_imagem() -> None:
+    """Regressão: markdown com imagem (void tag) não deve levantar ErroHtmlInvalido."""
+    html = converter_para_html("![alt](x.png)\n")
+    assert "<img" in html
+    assert "alt=" in html or "alt =" in html
+
+
+def test_aceita_markdown_com_linha_horizontal() -> None:
+    """Regressão: markdown com linha horizontal (void tag hr) não deve levantar ErroHtmlInvalido."""
+    html = converter_para_html("texto\n\n---\n\nmais texto\n")
+    assert "<hr" in html
+    assert "texto" in html
+    assert "mais texto" in html
