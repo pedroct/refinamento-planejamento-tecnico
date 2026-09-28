@@ -2,6 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Status:** ✅ Concluído (2026-09-28). As 13 tasks foram implementadas, revisadas (com fix loops) e
+> mergeadas em `main` via `superpowers:subagent-driven-development`, com revisão final de branch
+> inteira e uma rodada de correções cross-package. 119 testes passando (48 + 39 + 32, um pacote por
+> skill). Quatro lacunas da spec original ficaram de fora deste plano — nenhuma task as desenhou — e
+> estão registradas em README.md § "Estado do projeto": ID de Task em `preparar-implementacao`, comando
+> de CLI para hierarquia/usuário autenticado em `decompor-tasks`, leitura de `.env`/PAT interativo em
+> qualquer pacote, e ancoragem de Story Points item a item.
+
 **Goal:** Construir as três skills do repositório `refinamento-planejamento-tecnico` — `refinar-tecnicamente`, `decompor-tasks` e `preparar-implementacao` — que cobrem o refinamento técnico, o planejamento de capacidade por pessoa e a preparação do material de implementação, a partir de work items já publicados pelo `gerador-hu`.
 
 **Architecture:** Três pacotes Python independentes, um por skill, cada um instalável isoladamente (padrão `npx skills`). Cada pacote vendoriza sua própria cópia de um cliente HTTP mínimo para o Azure Boards (GET, PATCH, POST, WIQL), seguindo o mesmo padrão de retentativa e classes de erro já usado em `publicar-backlog-demanda-azure-boards`, do repositório `gerador-hu`. Nenhum pacote importa de outro; cada SKILL.md guia o agente pelas partes de investigação e entrevista, enquanto os scripts Python cobrem chamadas de API, ancoragem de estimativa, autorização e manifesto.
@@ -49,7 +57,7 @@
 - Produces: `class ClienteAzureDevOps` com `ler_work_item(id: int) -> dict[str, Any]`, `consultar_wiql(wiql: str) -> list[int]`, `gravar_campo(id: int, campo: str, valor: str) -> None`, `usuario_autenticado() -> dict[str, Any]`
 - Produces: `ErroDestinoInvalido`, `ErroFalhaTransitoria`, `ErroRespostaInvalida` (classes de exceção)
 
-- [ ] **Step 1: Escrever o pyproject.toml e os arquivos de apoio**
+- [x] **Step 1: Escrever o pyproject.toml e os arquivos de apoio**
 
 ```toml
 [build-system]
@@ -134,7 +142,7 @@ def main() -> None:
     raise SystemExit("CLI ainda não implementada — veja o Task 5 do plano.")
 ```
 
-- [ ] **Step 2: Escrever o teste de configuração**
+- [x] **Step 2: Escrever o teste de configuração**
 
 ```python
 # refinar-tecnicamente/tests/test_configuracao.py
@@ -183,12 +191,12 @@ def test_aceita_nome_de_campo_customizado() -> None:
     assert config.campo_spec_tecnica == "Custom.OutroCampo"
 ```
 
-- [ ] **Step 3: Rodar os testes e confirmar que falham**
+- [x] **Step 3: Rodar os testes e confirmar que falham**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_configuracao.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'refinar_tecnicamente.configuracao'`
 
-- [ ] **Step 4: Implementar `configuracao.py`**
+- [x] **Step 4: Implementar `configuracao.py`**
 
 ```python
 # refinar-tecnicamente/src/refinar_tecnicamente/configuracao.py
@@ -246,12 +254,12 @@ def carregar_configuracao(env: Mapping[str, str]) -> ConfiguracaoRefinamento:
         raise ErroConfiguracao(f"Configuração incompleta ou inválida: {erro}") from erro
 ```
 
-- [ ] **Step 5: Rodar os testes de configuração e confirmar que passam**
+- [x] **Step 5: Rodar os testes de configuração e confirmar que passam**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_configuracao.py -v`
 Expected: PASS (4 testes)
 
-- [ ] **Step 6: Escrever o teste do cliente Azure DevOps**
+- [x] **Step 6: Escrever o teste do cliente Azure DevOps**
 
 ```python
 # refinar-tecnicamente/tests/test_cliente_azure_devops.py
@@ -349,12 +357,12 @@ def test_usuario_autenticado_devolve_perfil() -> None:
     assert perfil["emailAddress"] == "p@x"
 ```
 
-- [ ] **Step 7: Rodar os testes do cliente e confirmar que falham**
+- [x] **Step 7: Rodar os testes do cliente e confirmar que falham**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_cliente_azure_devops.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'refinar_tecnicamente.cliente_azure_devops'`
 
-- [ ] **Step 8: Implementar `cliente_azure_devops.py`**
+- [x] **Step 8: Implementar `cliente_azure_devops.py`**
 
 ```python
 # refinar-tecnicamente/src/refinar_tecnicamente/cliente_azure_devops.py
@@ -516,12 +524,12 @@ class ClienteAzureDevOps:
         return corpo_json
 ```
 
-- [ ] **Step 9: Rodar todos os testes do Task 1 e confirmar que passam**
+- [x] **Step 9: Rodar todos os testes do Task 1 e confirmar que passam**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/ -v`
 Expected: PASS (12 testes)
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 cd refinar-tecnicamente
@@ -546,7 +554,7 @@ módulo só faz o parsing determinístico da seção `## Lacunas e perguntas abe
 - Produces: `ler_lacunas(spec_md: str) -> list[Lacuna]`
 - Produces: `filtrar_tecnicas(lacunas: list[Lacuna]) -> list[Lacuna]` — devolve as rotuladas `Técnico` e as sem rótulo, na mesma ordem; nunca as rotuladas `Negócio`
 
-- [ ] **Step 1: Escrever os testes**
+- [x] **Step 1: Escrever os testes**
 
 ```python
 # refinar-tecnicamente/tests/test_leitor_lacunas.py
@@ -614,12 +622,12 @@ def test_filtrar_tecnicas_inclui_sem_rotulo() -> None:
     assert len(tecnicas) == 2
 ```
 
-- [ ] **Step 2: Rodar os testes e confirmar que falham**
+- [x] **Step 2: Rodar os testes e confirmar que falham**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_leitor_lacunas.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'refinar_tecnicamente.leitor_lacunas'`
 
-- [ ] **Step 3: Implementar `leitor_lacunas.py`**
+- [x] **Step 3: Implementar `leitor_lacunas.py`**
 
 ```python
 # refinar-tecnicamente/src/refinar_tecnicamente/leitor_lacunas.py
@@ -696,12 +704,12 @@ def filtrar_tecnicas(lacunas: list[Lacuna]) -> list[Lacuna]:
     return [l for l in lacunas if l.audiencia in (None, "Técnico")]
 ```
 
-- [ ] **Step 4: Rodar os testes e confirmar que passam**
+- [x] **Step 4: Rodar os testes e confirmar que passam**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_leitor_lacunas.py -v`
 Expected: PASS (6 testes)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd refinar-tecnicamente
@@ -722,7 +730,7 @@ Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 - Produces: `@dataclass(frozen=True) class SugestaoPontuacao` (campos: `pontos: float | None`, `baseado_em: tuple[int, ...]`)
 - Produces: `sugerir_story_points(cliente, *, projeto: str, area_path: str, tipos: tuple[str, ...], limite: int = 20) -> SugestaoPontuacao`
 
-- [ ] **Step 1: Escrever os testes**
+- [x] **Step 1: Escrever os testes**
 
 ```python
 # refinar-tecnicamente/tests/test_ancoragem_story_points.py
@@ -815,12 +823,12 @@ def test_respeita_o_limite_de_itens_consultados() -> None:
     assert len(sugestao.baseado_em) == 5
 ```
 
-- [ ] **Step 2: Rodar os testes e confirmar que falham**
+- [x] **Step 2: Rodar os testes e confirmar que falham**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_ancoragem_story_points.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'refinar_tecnicamente.ancoragem_story_points'`
 
-- [ ] **Step 3: Implementar `ancoragem_story_points.py`**
+- [x] **Step 3: Implementar `ancoragem_story_points.py`**
 
 ```python
 # refinar-tecnicamente/src/refinar_tecnicamente/ancoragem_story_points.py
@@ -884,12 +892,12 @@ def sugerir_story_points(
     return SugestaoPontuacao(pontos=mediana, baseado_em=tuple(id_ for id_, _valor in pontuados))
 ```
 
-- [ ] **Step 4: Rodar os testes e confirmar que passam**
+- [x] **Step 4: Rodar os testes e confirmar que passam**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_ancoragem_story_points.py -v`
 Expected: PASS (6 testes)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd refinar-tecnicamente
@@ -912,7 +920,7 @@ Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 - Produces: `converter_para_html(spec_md: str) -> str`
 - Produces: `gravar_spec_tecnica(cliente, *, id_demanda: int, campo: str, spec_md: str, resposta_confirmacao: str) -> None`
 
-- [ ] **Step 1: Escrever os testes**
+- [x] **Step 1: Escrever os testes**
 
 ```python
 # refinar-tecnicamente/tests/test_gravar_spec_tecnica.py
@@ -1010,12 +1018,12 @@ def test_confirmacao_com_espaco_extra_ao_final_ainda_e_aceita() -> None:
     assert len(cliente.chamadas) == 1
 ```
 
-- [ ] **Step 2: Rodar os testes e confirmar que falham**
+- [x] **Step 2: Rodar os testes e confirmar que falham**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_gravar_spec_tecnica.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'refinar_tecnicamente.gravar_spec_tecnica'`
 
-- [ ] **Step 3: Implementar `gravar_spec_tecnica.py`**
+- [x] **Step 3: Implementar `gravar_spec_tecnica.py`**
 
 ```python
 # refinar-tecnicamente/src/refinar_tecnicamente/gravar_spec_tecnica.py
@@ -1106,12 +1114,12 @@ def gravar_spec_tecnica(
     cliente.gravar_campo(id_demanda, campo, html)
 ```
 
-- [ ] **Step 4: Rodar os testes e confirmar que passam**
+- [x] **Step 4: Rodar os testes e confirmar que passam**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_gravar_spec_tecnica.py -v`
 Expected: PASS (9 testes, incluindo os 5 casos parametrizados)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd refinar-tecnicamente
@@ -1134,7 +1142,7 @@ Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 - Consumes: `carregar_configuracao` (Task 1), `ClienteAzureDevOps` (Task 1), `ler_lacunas`/`filtrar_tecnicas` (Task 2), `sugerir_story_points` (Task 3), `montar_frase_autorizacao`/`gravar_spec_tecnica` (Task 4)
 - Produces: `executar(argv: list[str], *, env: Mapping[str, str], entrada: Callable[[str], str] = input) -> int`
 
-- [ ] **Step 1: Escrever os testes**
+- [x] **Step 1: Escrever os testes**
 
 ```python
 # refinar-tecnicamente/tests/test_cli.py
@@ -1195,12 +1203,12 @@ def test_gravar_spec_tecnica_sem_confirmacao_exata_nao_chama_rede(
     assert "13959" in saida  # a frase esperada foi mostrada, nomeando a Demanda
 ```
 
-- [ ] **Step 2: Rodar os testes e confirmar que falham**
+- [x] **Step 2: Rodar os testes e confirmar que falham**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_cli.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'refinar_tecnicamente.cli'`
 
-- [ ] **Step 3: Implementar `cli.py`**
+- [x] **Step 3: Implementar `cli.py`**
 
 ```python
 # refinar-tecnicamente/src/refinar_tecnicamente/cli.py
@@ -1330,12 +1338,12 @@ def main() -> None:
     raise SystemExit(executar(sys.argv[1:], env=os.environ))
 ```
 
-- [ ] **Step 4: Rodar os testes e confirmar que passam**
+- [x] **Step 4: Rodar os testes e confirmar que passam**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/ -v`
 Expected: PASS (todos os testes do pacote, inclusive os 3 novos de CLI)
 
-- [ ] **Step 5: Escrever o SKILL.md**
+- [x] **Step 5: Escrever o SKILL.md**
 
 ```markdown
 ---
@@ -1382,7 +1390,7 @@ Negócio via `Custom.DemandaSpecTecnica`.
 - Não inventa Story Points sem ancoragem em histórico ou confirmação humana explícita.
 ```
 
-- [ ] **Step 6: Escrever o README.md**
+- [x] **Step 6: Escrever o README.md**
 
 ```markdown
 # refinar-tecnicamente
@@ -1404,7 +1412,7 @@ Copie `.env.example` para `.env` e preencha organização, projeto e token do Az
 nunca deve ser versionado.
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd refinar-tecnicamente
@@ -1439,7 +1447,7 @@ Idêntico em estrutura ao Task 1 de `refinar-tecnicamente`, com duas diferenças
 `gravar_campo` por `criar_work_item` (esta skill cria Task, não grava campo), e `configuracao.py`
 troca `campo_spec_tecnica` por `tipo_task`.
 
-- [ ] **Step 1: Escrever pyproject.toml, .env.example e .gitignore**
+- [x] **Step 1: Escrever pyproject.toml, .env.example e .gitignore**
 
 ```toml
 [build-system]
@@ -1519,7 +1527,7 @@ uv.lock
 from __future__ import annotations
 ```
 
-- [ ] **Step 2: Escrever o teste de configuração**
+- [x] **Step 2: Escrever o teste de configuração**
 
 ```python
 # decompor-tasks/tests/test_configuracao.py
@@ -1555,12 +1563,12 @@ def test_aceita_tipo_task_customizado() -> None:
     assert carregar_configuracao(env).tipo_task == "Tarefa"
 ```
 
-- [ ] **Step 3: Rodar os testes e confirmar que falham**
+- [x] **Step 3: Rodar os testes e confirmar que falham**
 
 Run: `cd decompor-tasks && uv run pytest tests/test_configuracao.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'decompor_tasks.configuracao'`
 
-- [ ] **Step 4: Implementar `configuracao.py`**
+- [x] **Step 4: Implementar `configuracao.py`**
 
 ```python
 # decompor-tasks/src/decompor_tasks/configuracao.py
@@ -1616,12 +1624,12 @@ def carregar_configuracao(env: Mapping[str, str]) -> ConfiguracaoDecomposicao:
         raise ErroConfiguracao(f"Configuração incompleta ou inválida: {erro}") from erro
 ```
 
-- [ ] **Step 5: Rodar os testes de configuração e confirmar que passam**
+- [x] **Step 5: Rodar os testes de configuração e confirmar que passam**
 
 Run: `cd decompor-tasks && uv run pytest tests/test_configuracao.py -v`
 Expected: PASS (3 testes)
 
-- [ ] **Step 6: Escrever o teste do cliente Azure DevOps**
+- [x] **Step 6: Escrever o teste do cliente Azure DevOps**
 
 ```python
 # decompor-tasks/tests/test_cliente_azure_devops.py
@@ -1694,12 +1702,12 @@ def test_usuario_autenticado_devolve_perfil() -> None:
         assert cliente.usuario_autenticado()["emailAddress"] == "dev@time"
 ```
 
-- [ ] **Step 7: Rodar os testes do cliente e confirmar que falham**
+- [x] **Step 7: Rodar os testes do cliente e confirmar que falham**
 
 Run: `cd decompor-tasks && uv run pytest tests/test_cliente_azure_devops.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'decompor_tasks.cliente_azure_devops'`
 
-- [ ] **Step 8: Implementar `cliente_azure_devops.py`**
+- [x] **Step 8: Implementar `cliente_azure_devops.py`**
 
 ```python
 # decompor-tasks/src/decompor_tasks/cliente_azure_devops.py
@@ -1856,12 +1864,12 @@ class ClienteAzureDevOps:
         return corpo_json
 ```
 
-- [ ] **Step 9: Rodar todos os testes do Task 6 e confirmar que passam**
+- [x] **Step 9: Rodar todos os testes do Task 6 e confirmar que passam**
 
 Run: `cd decompor-tasks && uv run pytest tests/ -v`
 Expected: PASS (9 testes)
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 cd decompor-tasks
@@ -1886,7 +1894,7 @@ A busca por comparável usa duas condições: mesmo Area Path e `System.Title` c
 palavra significativa (4+ caracteres) do título da Task proposta — um filtro simples de similaridade
 lexical, suficiente para reduzir o ruído de Tasks fechadas sem relação nenhuma com a proposta.
 
-- [ ] **Step 1: Escrever os testes**
+- [x] **Step 1: Escrever os testes**
 
 ```python
 # decompor-tasks/tests/test_ancoragem_horas.py
@@ -1989,12 +1997,12 @@ def test_consulta_filtra_projeto_area_e_tipo_task() -> None:
     assert "Closed" in cliente.wiql_recebido
 ```
 
-- [ ] **Step 2: Rodar os testes e confirmar que falham**
+- [x] **Step 2: Rodar os testes e confirmar que falham**
 
 Run: `cd decompor-tasks && uv run pytest tests/test_ancoragem_horas.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'decompor_tasks.ancoragem_horas'`
 
-- [ ] **Step 3: Implementar `ancoragem_horas.py`**
+- [x] **Step 3: Implementar `ancoragem_horas.py`**
 
 ```python
 # decompor-tasks/src/decompor_tasks/ancoragem_horas.py
@@ -2070,12 +2078,12 @@ def sugerir_horas(
     return SugestaoHoras(horas=mediana, baseado_em=tuple(id_ for id_, _valor in pontuados))
 ```
 
-- [ ] **Step 4: Rodar os testes e confirmar que passam**
+- [x] **Step 4: Rodar os testes e confirmar que passam**
 
 Run: `cd decompor-tasks && uv run pytest tests/test_ancoragem_horas.py -v`
 Expected: PASS (5 testes)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd decompor-tasks
@@ -2102,7 +2110,7 @@ Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 - Produces: `ErroReconciliacaoNecessaria`
 - Produces: `montar_frase_autorizacao(historia_id: int) -> str`
 
-- [ ] **Step 1: Escrever os testes**
+- [x] **Step 1: Escrever os testes**
 
 ```python
 # decompor-tasks/tests/test_manifesto.py
@@ -2181,12 +2189,12 @@ def test_frase_de_autorizacao_nomeia_a_historia() -> None:
     assert frase.startswith("AUTORIZAR TASKS")
 ```
 
-- [ ] **Step 2: Rodar os testes e confirmar que falham**
+- [x] **Step 2: Rodar os testes e confirmar que falham**
 
 Run: `cd decompor-tasks && uv run pytest tests/test_manifesto.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'decompor_tasks.manifesto'`
 
-- [ ] **Step 3: Implementar `manifesto.py`**
+- [x] **Step 3: Implementar `manifesto.py`**
 
 ```python
 # decompor-tasks/src/decompor_tasks/manifesto.py
@@ -2305,12 +2313,12 @@ def montar_frase_autorizacao(historia_id: int) -> str:
     return f"AUTORIZAR TASKS #{historia_id}"
 ```
 
-- [ ] **Step 4: Rodar os testes e confirmar que passam**
+- [x] **Step 4: Rodar os testes e confirmar que passam**
 
 Run: `cd decompor-tasks && uv run pytest tests/test_manifesto.py -v`
 Expected: PASS (9 testes)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd decompor-tasks
@@ -2337,7 +2345,7 @@ Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 - Produces: `ErroConfirmacaoInvalida`
 - Produces: `criar_tasks_pendentes(cliente, *, organizacao, projeto, tipo_task, plano, manifesto_atual, caminho_manifesto, resposta_confirmacao) -> Manifesto`
 
-- [ ] **Step 1: Escrever os testes de `criar_tasks.py`**
+- [x] **Step 1: Escrever os testes de `criar_tasks.py`**
 
 ```python
 # decompor-tasks/tests/test_criar_tasks.py
@@ -2433,12 +2441,12 @@ def test_cria_so_as_tasks_pendentes_e_atualiza_manifesto_apos_cada_uma(tmp_path:
     assert ler_manifesto(caminho) == resultado
 ```
 
-- [ ] **Step 2: Rodar os testes e confirmar que falham**
+- [x] **Step 2: Rodar os testes e confirmar que falham**
 
 Run: `cd decompor-tasks && uv run pytest tests/test_criar_tasks.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'decompor_tasks.criar_tasks'`
 
-- [ ] **Step 3: Implementar `criar_tasks.py`**
+- [x] **Step 3: Implementar `criar_tasks.py`**
 
 ```python
 # decompor-tasks/src/decompor_tasks/criar_tasks.py
@@ -2536,12 +2544,12 @@ def criar_tasks_pendentes(
     return manifesto
 ```
 
-- [ ] **Step 4: Rodar os testes de `criar_tasks.py` e confirmar que passam**
+- [x] **Step 4: Rodar os testes de `criar_tasks.py` e confirmar que passam**
 
 Run: `cd decompor-tasks && uv run pytest tests/test_criar_tasks.py -v`
 Expected: PASS (6 testes, incluindo os 4 parametrizados de confirmação)
 
-- [ ] **Step 5: Escrever o teste da CLI**
+- [x] **Step 5: Escrever o teste da CLI**
 
 ```python
 # decompor-tasks/tests/test_cli.py
@@ -2584,12 +2592,12 @@ def test_sugerir_horas_sem_configuracao_devolve_erro(capsys: object) -> None:
     assert "Configuração inválida" in saida
 ```
 
-- [ ] **Step 6: Rodar o teste da CLI e confirmar que falha**
+- [x] **Step 6: Rodar o teste da CLI e confirmar que falha**
 
 Run: `cd decompor-tasks && uv run pytest tests/test_cli.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'decompor_tasks.cli'`
 
-- [ ] **Step 7: Implementar `cli.py` e atualizar `__init__.py`**
+- [x] **Step 7: Implementar `cli.py` e atualizar `__init__.py`**
 
 ```python
 # decompor-tasks/src/decompor_tasks/cli.py
@@ -2718,12 +2726,12 @@ def main() -> None:
     raise SystemExit(executar(sys.argv[1:], env=os.environ))
 ```
 
-- [ ] **Step 8: Rodar todos os testes do pacote e confirmar que passam**
+- [x] **Step 8: Rodar todos os testes do pacote e confirmar que passam**
 
 Run: `cd decompor-tasks && uv run pytest tests/ -v`
 Expected: PASS (todos os testes do pacote, inclusive o novo de CLI)
 
-- [ ] **Step 9: Escrever o SKILL.md**
+- [x] **Step 9: Escrever o SKILL.md**
 
 ```markdown
 ---
@@ -2764,7 +2772,7 @@ comparáveis, atribuí-las a quem vai executar e criá-las sob autorização tex
 - Não inventa horas sem ancoragem em histórico ou confirmação humana explícita.
 ```
 
-- [ ] **Step 10: Escrever o README.md**
+- [x] **Step 10: Escrever o README.md**
 
 ```markdown
 # decompor-tasks
@@ -2784,7 +2792,7 @@ Copie `.env.example` para `.env` e preencha organização, projeto e token do Az
 nunca deve ser versionado.
 ```
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 cd decompor-tasks
@@ -2822,7 +2830,7 @@ Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 Cliente sem `gravar_campo` nem `criar_work_item` de propósito — esta skill nunca escreve no Azure
 Boards.
 
-- [ ] **Step 1: Escrever pyproject.toml, .env.example e .gitignore**
+- [x] **Step 1: Escrever pyproject.toml, .env.example e .gitignore**
 
 ```toml
 [build-system]
@@ -2903,7 +2911,7 @@ uv.lock
 from __future__ import annotations
 ```
 
-- [ ] **Step 2: Escrever o teste de configuração**
+- [x] **Step 2: Escrever o teste de configuração**
 
 ```python
 # preparar-implementacao/tests/test_configuracao.py
@@ -2930,12 +2938,12 @@ def test_recusa_configuracao_sem_token() -> None:
         carregar_configuracao(env)
 ```
 
-- [ ] **Step 3: Rodar os testes e confirmar que falham**
+- [x] **Step 3: Rodar os testes e confirmar que falham**
 
 Run: `cd preparar-implementacao && uv run pytest tests/test_configuracao.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'preparar_implementacao.configuracao'`
 
-- [ ] **Step 4: Implementar `configuracao.py`**
+- [x] **Step 4: Implementar `configuracao.py`**
 
 ```python
 # preparar-implementacao/src/preparar_implementacao/configuracao.py
@@ -3001,12 +3009,12 @@ def carregar_configuracao(env: Mapping[str, str]) -> ConfiguracaoPreparacao:
         raise ErroConfiguracao(f"Configuração incompleta ou inválida: {erro}") from erro
 ```
 
-- [ ] **Step 5: Rodar os testes de configuração e confirmar que passam**
+- [x] **Step 5: Rodar os testes de configuração e confirmar que passam**
 
 Run: `cd preparar-implementacao && uv run pytest tests/test_configuracao.py -v`
 Expected: PASS (2 testes)
 
-- [ ] **Step 6: Escrever o teste do cliente Azure DevOps**
+- [x] **Step 6: Escrever o teste do cliente Azure DevOps**
 
 ```python
 # preparar-implementacao/tests/test_cliente_azure_devops.py
@@ -3061,12 +3069,12 @@ def test_cliente_nao_tem_metodo_de_escrita() -> None:
         assert not hasattr(cliente, "criar_work_item")
 ```
 
-- [ ] **Step 7: Rodar os testes do cliente e confirmar que falham**
+- [x] **Step 7: Rodar os testes do cliente e confirmar que falham**
 
 Run: `cd preparar-implementacao && uv run pytest tests/test_cliente_azure_devops.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'preparar_implementacao.cliente_azure_devops'`
 
-- [ ] **Step 8: Implementar `cliente_azure_devops.py`**
+- [x] **Step 8: Implementar `cliente_azure_devops.py`**
 
 ```python
 # preparar-implementacao/src/preparar_implementacao/cliente_azure_devops.py
@@ -3196,12 +3204,12 @@ class ClienteAzureDevOps:
         return corpo_json
 ```
 
-- [ ] **Step 9: Rodar os testes do cliente e confirmar que passam**
+- [x] **Step 9: Rodar os testes do cliente e confirmar que passam**
 
 Run: `cd preparar-implementacao && uv run pytest tests/test_cliente_azure_devops.py -v`
 Expected: PASS (5 testes)
 
-- [ ] **Step 10: Escrever o teste de subida de hierarquia**
+- [x] **Step 10: Escrever o teste de subida de hierarquia**
 
 ```python
 # preparar-implementacao/tests/test_hierarquia.py
@@ -3262,12 +3270,12 @@ def test_item_ja_e_a_demanda() -> None:
     assert [item["id"] for item in cadeia] == [4]
 ```
 
-- [ ] **Step 11: Rodar os testes de hierarquia e confirmar que falham**
+- [x] **Step 11: Rodar os testes de hierarquia e confirmar que falham**
 
 Run: `cd preparar-implementacao && uv run pytest tests/test_hierarquia.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'preparar_implementacao.hierarquia'`
 
-- [ ] **Step 12: Implementar `hierarquia.py`**
+- [x] **Step 12: Implementar `hierarquia.py`**
 
 ```python
 # preparar-implementacao/src/preparar_implementacao/hierarquia.py
@@ -3320,12 +3328,12 @@ def subir_ate_demanda(
     )
 ```
 
-- [ ] **Step 13: Rodar todos os testes do Task 10 e confirmar que passam**
+- [x] **Step 13: Rodar todos os testes do Task 10 e confirmar que passam**
 
 Run: `cd preparar-implementacao && uv run pytest tests/ -v`
 Expected: PASS (10 testes)
 
-- [ ] **Step 14: Commit**
+- [x] **Step 14: Commit**
 
 ```bash
 cd preparar-implementacao
@@ -3351,7 +3359,7 @@ Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 - Produces: `ErroSuficienciaInsuficiente`
 - Produces: `verificar_suficiencia(*, spec_tecnica: str | None, criterios_aceitacao: str | None, tasks: list[dict[str, Any]]) -> None`
 
-- [ ] **Step 1: Escrever os testes de `contexto.py`**
+- [x] **Step 1: Escrever os testes de `contexto.py`**
 
 ```python
 # preparar-implementacao/tests/test_contexto.py
@@ -3418,12 +3426,12 @@ def test_ler_tasks_busca_cada_id() -> None:
     assert [t["id"] for t in tasks] == [10, 11]
 ```
 
-- [ ] **Step 2: Rodar os testes de `contexto.py` e confirmar que falham**
+- [x] **Step 2: Rodar os testes de `contexto.py` e confirmar que falham**
 
 Run: `cd preparar-implementacao && uv run pytest tests/test_contexto.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'preparar_implementacao.contexto'`
 
-- [ ] **Step 3: Implementar `contexto.py`**
+- [x] **Step 3: Implementar `contexto.py`**
 
 ```python
 # preparar-implementacao/src/preparar_implementacao/contexto.py
@@ -3468,12 +3476,12 @@ def ler_tasks(cliente: _ClienteLeitura, ids: list[int]) -> list[dict[str, Any]]:
     return [cliente.ler_work_item(id_) for id_ in ids]
 ```
 
-- [ ] **Step 4: Rodar os testes de `contexto.py` e confirmar que passam**
+- [x] **Step 4: Rodar os testes de `contexto.py` e confirmar que passam**
 
 Run: `cd preparar-implementacao && uv run pytest tests/test_contexto.py -v`
 Expected: PASS (6 testes)
 
-- [ ] **Step 5: Escrever os testes de `suficiencia.py`**
+- [x] **Step 5: Escrever os testes de `suficiencia.py`**
 
 ```python
 # preparar-implementacao/tests/test_suficiencia.py
@@ -3543,12 +3551,12 @@ def test_multiplas_lacunas_aparecem_todas_na_mesma_mensagem() -> None:
     assert "Task" in mensagem
 ```
 
-- [ ] **Step 6: Rodar os testes de `suficiencia.py` e confirmar que falham**
+- [x] **Step 6: Rodar os testes de `suficiencia.py` e confirmar que falham**
 
 Run: `cd preparar-implementacao && uv run pytest tests/test_suficiencia.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'preparar_implementacao.suficiencia'`
 
-- [ ] **Step 7: Implementar `suficiencia.py`**
+- [x] **Step 7: Implementar `suficiencia.py`**
 
 ```python
 # preparar-implementacao/src/preparar_implementacao/suficiencia.py
@@ -3593,12 +3601,12 @@ def verificar_suficiencia(
         )
 ```
 
-- [ ] **Step 8: Rodar os testes de `suficiencia.py` e confirmar que passam**
+- [x] **Step 8: Rodar os testes de `suficiencia.py` e confirmar que passam**
 
 Run: `cd preparar-implementacao && uv run pytest tests/test_suficiencia.py -v`
 Expected: PASS (6 testes)
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 cd preparar-implementacao
@@ -3624,7 +3632,7 @@ Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 - Consumes: `subir_ate_demanda` (Task 10), `extrair_campo_demanda`/`ids_tasks_filhas`/`ler_tasks` (Task 11), `verificar_suficiencia`/`ErroSuficienciaInsuficiente` (Task 11)
 - Produces: `montar_briefing(*, work_item: dict[str, Any], spec_tecnica: str, spec_negocios: str | None, tasks: list[dict[str, Any]]) -> str`
 
-- [ ] **Step 1: Escrever os testes de `briefing.py`**
+- [x] **Step 1: Escrever os testes de `briefing.py`**
 
 ```python
 # preparar-implementacao/tests/test_briefing.py
@@ -3681,12 +3689,12 @@ def test_briefing_sem_spec_negocios_nao_quebra() -> None:
     assert "Renovar diligência automaticamente" in briefing
 ```
 
-- [ ] **Step 2: Rodar os testes de `briefing.py` e confirmar que falham**
+- [x] **Step 2: Rodar os testes de `briefing.py` e confirmar que falham**
 
 Run: `cd preparar-implementacao && uv run pytest tests/test_briefing.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'preparar_implementacao.briefing'`
 
-- [ ] **Step 3: Implementar `briefing.py`**
+- [x] **Step 3: Implementar `briefing.py`**
 
 ```python
 # preparar-implementacao/src/preparar_implementacao/briefing.py
@@ -3745,12 +3753,12 @@ def montar_briefing(
     return "\n".join(partes)
 ```
 
-- [ ] **Step 4: Rodar os testes de `briefing.py` e confirmar que passam**
+- [x] **Step 4: Rodar os testes de `briefing.py` e confirmar que passam**
 
 Run: `cd preparar-implementacao && uv run pytest tests/test_briefing.py -v`
 Expected: PASS (2 testes)
 
-- [ ] **Step 5: Escrever o teste da CLI**
+- [x] **Step 5: Escrever o teste da CLI**
 
 ```python
 # preparar-implementacao/tests/test_cli.py
@@ -3770,12 +3778,12 @@ def test_montar_sem_configuracao_devolve_erro(capsys: object) -> None:
     assert "Configuração inválida" in saida
 ```
 
-- [ ] **Step 6: Rodar o teste da CLI e confirmar que falha**
+- [x] **Step 6: Rodar o teste da CLI e confirmar que falha**
 
 Run: `cd preparar-implementacao && uv run pytest tests/test_cli.py -v`
 Expected: FAIL com `ModuleNotFoundError: No module named 'preparar_implementacao.cli'`
 
-- [ ] **Step 7: Implementar `cli.py` e atualizar `__init__.py`**
+- [x] **Step 7: Implementar `cli.py` e atualizar `__init__.py`**
 
 ```python
 # preparar-implementacao/src/preparar_implementacao/cli.py
@@ -3860,12 +3868,12 @@ def main() -> None:
     raise SystemExit(executar(sys.argv[1:], env=os.environ))
 ```
 
-- [ ] **Step 8: Rodar todos os testes do pacote e confirmar que passam**
+- [x] **Step 8: Rodar todos os testes do pacote e confirmar que passam**
 
 Run: `cd preparar-implementacao && uv run pytest tests/ -v`
 Expected: PASS (todos os testes do pacote, inclusive o novo de CLI)
 
-- [ ] **Step 9: Escrever o SKILL.md**
+- [x] **Step 9: Escrever o SKILL.md**
 
 ```markdown
 ---
@@ -3899,7 +3907,7 @@ invoca `brainstorming` nem `writing-plans` — você leva o briefing a eles, na 
 - Não preenche uma lacuna de suficiência com conteúdo inventado.
 ```
 
-- [ ] **Step 10: Escrever o README.md**
+- [x] **Step 10: Escrever o README.md**
 
 ```markdown
 # preparar-implementacao
@@ -3920,7 +3928,7 @@ Copie `.env.example` para `.env` e preencha organização, projeto e token do Az
 nunca deve ser versionado.
 ```
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 cd preparar-implementacao
@@ -3943,7 +3951,7 @@ Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 **Interfaces:**
 - Nenhuma — documentação, sem código.
 
-- [ ] **Step 1: Escrever o `README.md` da raiz**
+- [x] **Step 1: Escrever o `README.md` da raiz**
 
 ```markdown
 # Refinamento e Planejamento Técnico
@@ -4012,7 +4020,7 @@ token do Azure DevOps antes de usar. O token nunca deve ser versionado.
 - Um PAT do Azure DevOps com permissão de leitura e escrita em work items.
 ```
 
-- [ ] **Step 2: Escrever o `CLAUDE.md` da raiz**
+- [x] **Step 2: Escrever o `CLAUDE.md` da raiz**
 
 ```markdown
 # Convenções deste projeto
@@ -4035,7 +4043,7 @@ Nenhuma estimativa (Story Points ou horas) é inventada sem ancoragem em item fe
 confirmação humana explícita registrada na conversa.
 ```
 
-- [ ] **Step 3: Escrever o `.gitignore` da raiz**
+- [x] **Step 3: Escrever o `.gitignore` da raiz**
 
 ```text
 .venv/
@@ -4048,7 +4056,7 @@ __pycache__/
 .DS_Store
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add README.md CLAUDE.md .gitignore
