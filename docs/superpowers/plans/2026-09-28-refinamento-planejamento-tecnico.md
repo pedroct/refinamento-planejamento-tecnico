@@ -528,7 +528,7 @@ cd refinar-tecnicamente
 git add pyproject.toml .env.example .gitignore src/ tests/
 git commit -m "feat(refinar-tecnicamente): scaffold, configuração e cliente Azure DevOps
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 ```
 
 ### Task 2: Leitor de lacunas técnicas de `spec.md`
@@ -708,7 +708,7 @@ cd refinar-tecnicamente
 git add src/refinar_tecnicamente/leitor_lacunas.py tests/test_leitor_lacunas.py
 git commit -m "feat(refinar-tecnicamente): leitor de lacunas técnicas de spec.md
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 ```
 
 ### Task 3: Ancoragem de Story Points em itens fechados comparáveis
@@ -896,7 +896,7 @@ cd refinar-tecnicamente
 git add src/refinar_tecnicamente/ancoragem_story_points.py tests/test_ancoragem_story_points.py
 git commit -m "feat(refinar-tecnicamente): ancoragem de Story Points em itens comparáveis
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 ```
 
 ### Task 4: Conversão para HTML e gravação de `Custom.DemandaSpecTecnica` sob confirmação
@@ -1118,7 +1118,7 @@ cd refinar-tecnicamente
 git add src/refinar_tecnicamente/gravar_spec_tecnica.py tests/test_gravar_spec_tecnica.py
 git commit -m "feat(refinar-tecnicamente): conversão para HTML e gravação sob confirmação
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 ```
 
 ### Task 5: CLI, SKILL.md e teste de integração da skill 1
@@ -1411,7 +1411,7 @@ cd refinar-tecnicamente
 git add src/refinar_tecnicamente/cli.py src/refinar_tecnicamente/__init__.py SKILL.md README.md tests/test_cli.py
 git commit -m "feat(refinar-tecnicamente): CLI, SKILL.md e testes de integração
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 ```
 
 ---
@@ -1868,7 +1868,7 @@ cd decompor-tasks
 git add pyproject.toml .env.example .gitignore src/ tests/
 git commit -m "feat(decompor-tasks): scaffold, configuração e cliente Azure DevOps
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 ```
 
 ### Task 7: Ancoragem de horas em Tasks fechadas comparáveis
@@ -2082,7 +2082,7 @@ cd decompor-tasks
 git add src/decompor_tasks/ancoragem_horas.py tests/test_ancoragem_horas.py
 git commit -m "feat(decompor-tasks): ancoragem de horas em Tasks fechadas comparáveis
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 ```
 
 ### Task 8: Plano, manifesto de retomada e frase de autorização
@@ -2317,7 +2317,7 @@ cd decompor-tasks
 git add src/decompor_tasks/manifesto.py tests/test_manifesto.py
 git commit -m "feat(decompor-tasks): plano, manifesto de retomada e frase de autorização
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 ```
 
 ### Task 9: Criação das Tasks, CLI, SKILL.md e testes de integração
@@ -2792,7 +2792,7 @@ git add src/decompor_tasks/criar_tasks.py src/decompor_tasks/cli.py src/decompor
   SKILL.md README.md tests/test_criar_tasks.py tests/test_cli.py
 git commit -m "feat(decompor-tasks): criação de Tasks, CLI, SKILL.md e testes de integração
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 ```
 
 ---
@@ -3332,7 +3332,7 @@ cd preparar-implementacao
 git add pyproject.toml .env.example .gitignore src/ tests/
 git commit -m "feat(preparar-implementacao): scaffold, configuração, cliente de leitura e hierarquia
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 ```
 
 ### Task 11: Contexto (specs, Tasks irmãs) e verificador de suficiência
@@ -3606,7 +3606,7 @@ git add src/preparar_implementacao/contexto.py src/preparar_implementacao/sufici
   tests/test_contexto.py tests/test_suficiencia.py
 git commit -m "feat(preparar-implementacao): contexto da Demanda, Tasks irmãs e verificador de suficiência
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 ```
 
 ### Task 12: Montagem do briefing, CLI, SKILL.md e testes de integração
@@ -3928,7 +3928,7 @@ git add src/preparar_implementacao/briefing.py src/preparar_implementacao/cli.py
   src/preparar_implementacao/__init__.py SKILL.md README.md tests/test_briefing.py tests/test_cli.py
 git commit -m "feat(preparar-implementacao): montagem do briefing, CLI, SKILL.md e testes
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 ```
 
 ---
@@ -4054,5 +4054,5 @@ __pycache__/
 git add README.md CLAUDE.md .gitignore
 git commit -m "docs: README e convenções de topo do repositório
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Pedro Teixeira <noreply@pedroct.com.br>"
 ```
