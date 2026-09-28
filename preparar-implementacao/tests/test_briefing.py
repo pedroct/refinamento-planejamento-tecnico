@@ -1,0 +1,51 @@
+from typing import Any
+
+from preparar_implementacao.briefing import montar_briefing
+
+
+def _work_item(tipo: str) -> dict[str, Any]:
+    return {
+        "id": 1,
+        "fields": {
+            "System.Title": "Renovar diligência automaticamente",
+            "System.WorkItemType": tipo,
+            "System.Description": "<p>Como usuário, quero...</p>",
+            "Microsoft.VSTS.Common.AcceptanceCriteria": "<p>Dado que...</p>",
+        },
+    }
+
+
+def _task(titulo: str, estimativa: float) -> dict[str, Any]:
+    return {
+        "id": 10,
+        "fields": {
+            "System.Title": titulo,
+            "Microsoft.VSTS.Scheduling.OriginalEstimate": estimativa,
+            "Microsoft.VSTS.Scheduling.RemainingWork": estimativa,
+        },
+    }
+
+
+def test_briefing_inclui_titulo_e_criterios() -> None:
+    briefing = montar_briefing(
+        work_item=_work_item("User Story"),
+        spec_tecnica="<p>abordagem técnica</p>",
+        spec_negocios="<p>contexto de negócio</p>",
+        tasks=[_task("Task A", 4.0)],
+    )
+    assert "Renovar diligência automaticamente" in briefing
+    assert "abordagem técnica" in briefing
+    assert "contexto de negócio" in briefing
+    assert "Dado que" in briefing
+    assert "Task A" in briefing
+    assert "4.0" in briefing
+
+
+def test_briefing_sem_spec_negocios_nao_quebra() -> None:
+    briefing = montar_briefing(
+        work_item=_work_item("Bug"),
+        spec_tecnica="<p>abordagem</p>",
+        spec_negocios=None,
+        tasks=[],
+    )
+    assert "Renovar diligência automaticamente" in briefing
