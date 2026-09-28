@@ -22,6 +22,7 @@ refinar-tecnicamente = "refinar_tecnicamente:main"
 dev = [
   "mypy==2.1.0",
   "pytest==9.0.3",
+  "pytest-cov==7.1.0",
   "ruff==0.15.14",
 ]
 
@@ -46,3 +47,6 @@ warn_unused_ignores = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src"]
