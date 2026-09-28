@@ -82,6 +82,17 @@ def criar_tasks_pendentes(
             tipo_task=tipo_task,
             task=task,
         )
+        # Grava a marca de "em andamento" ANTES da chamada de criação: se a chamada falhar
+        # depois que o Azure Boards já tiver criado a Task (resposta ambígua perdida por
+        # timeout ou 5xx), a marca persiste e uma reexecução exige reconciliação manual em
+        # vez de recriar a Task silenciosamente.
+        manifesto = Manifesto(
+            historia_id=plano.historia_id,
+            hash_plano=hash_atual,
+            criadas=criadas,
+            em_andamento=frozenset({task.titulo}),
+        )
+        gravar_manifesto(caminho_manifesto, manifesto)
         resultado = cliente.criar_work_item(tipo_task, operacoes)
         criadas[task.titulo] = resultado["id"]
         manifesto = Manifesto(historia_id=plano.historia_id, hash_plano=hash_atual, criadas=criadas)

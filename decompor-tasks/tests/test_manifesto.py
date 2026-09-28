@@ -63,6 +63,31 @@ def test_gravar_e_ler_manifesto_preserva_conteudo(tmp_path: Path) -> None:
     assert lido == manifesto
 
 
+def test_gravar_e_ler_manifesto_preserva_em_andamento(tmp_path: Path) -> None:
+    caminho = tmp_path / "historia-100.json"
+    manifesto = Manifesto(
+        historia_id=100,
+        hash_plano="abc",
+        criadas={"Task A": 501},
+        em_andamento=frozenset({"Task B"}),
+    )
+    gravar_manifesto(caminho, manifesto)
+    lido = ler_manifesto(caminho)
+    assert lido == manifesto
+
+
+def test_manifesto_com_task_em_andamento_exige_reconciliacao_e_nomeia_a_task() -> None:
+    plano = PlanoTasks(historia_id=100, tasks=(_TASK_A, _TASK_B))
+    manifesto = Manifesto(
+        historia_id=100,
+        hash_plano=calcular_hash_plano(plano),
+        criadas={"Task A": 501},
+        em_andamento=frozenset({"Task B"}),
+    )
+    with pytest.raises(ErroReconciliacaoNecessaria, match="Task B"):
+        tasks_pendentes(plano, manifesto)
+
+
 def test_ler_manifesto_inexistente_devolve_none(tmp_path: Path) -> None:
     assert ler_manifesto(tmp_path / "nao-existe.json") is None
 

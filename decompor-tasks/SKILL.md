@@ -26,7 +26,11 @@ comparáveis, atribuí-las a quem vai executar e criá-las sob autorização tex
    `assigned_to` = usuário do PAT) e grave num arquivo JSON temporário.
 6. Rode `decompor-tasks criar <plano.json> --manifesto <caminho>`. A CLI mostra o plano completo e
    pede a frase de autorização; só cria (`POST`) as Tasks que a resposta exata autorizar. Uma
-   reexecução após falha parcial retoma do manifesto sem duplicar.
+   reexecução após falha parcial retoma do manifesto sem duplicar. Se uma criação falhar de forma
+   ambígua (timeout ou erro 5xx depois que o Azure Boards pode já ter criado a Task do lado dele), o
+   manifesto marca aquela Task como "em andamento" e a CLI recusa qualquer reexecução com um erro
+   nomeando a Task — verifique manualmente no Azure Boards se ela foi criada antes de prosseguir; não
+   apague a marca do manifesto sem confirmar o estado real lá.
 
 ## O que esta skill nunca faz
 

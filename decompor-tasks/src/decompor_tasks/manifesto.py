@@ -38,11 +38,20 @@ class PlanoTasks:
 
 @dataclass(frozen=True)
 class Manifesto:
-    """Registra o hash do plano confirmado e as Tasks já criadas (`título -> ID`)."""
+    """Registra o hash do plano confirmado, as Tasks já criadas (`título -> ID`) e as
+    tentativas de criação cujo desfecho é desconhecido (`em_andamento`).
+
+    Uma Task entra em `em_andamento` IMEDIATAMENTE ANTES da chamada de criação, e só sai de
+    lá se a chamada devolver um ID com sucesso (indo para `criadas`). Se a chamada levantar
+    `ErroFalhaTransitoria` — por exemplo um timeout ou 5xx depois que o Azure Boards já
+    processou a criação —, a Task já criada no servidor fica registrada como "em andamento"
+    e nunca é recriada silenciosamente numa reexecução; ver `tasks_pendentes`.
+    """
 
     historia_id: int
     hash_plano: str
     criadas: dict[str, int] = field(default_factory=dict)
+    em_andamento: frozenset[str] = field(default_factory=frozenset)
 
 
 def calcular_hash_plano(plano: PlanoTasks) -> str:
@@ -72,7 +81,10 @@ def ler_manifesto(caminho: Path) -> Manifesto | None:
         return None
     dados = json.loads(caminho.read_text(encoding="utf-8"))
     return Manifesto(
-        historia_id=dados["historia_id"], hash_plano=dados["hash_plano"], criadas=dados["criadas"]
+        historia_id=dados["historia_id"],
+        hash_plano=dados["hash_plano"],
+        criadas=dados["criadas"],
+        em_andamento=frozenset(dados.get("em_andamento", [])),
     )
 
 
@@ -83,6 +95,7 @@ def gravar_manifesto(caminho: Path, manifesto: Manifesto) -> None:
         "historia_id": manifesto.historia_id,
         "hash_plano": manifesto.hash_plano,
         "criadas": manifesto.criadas,
+        "em_andamento": sorted(manifesto.em_andamento),
     }
     descritor, nome_temporario = tempfile.mkstemp(dir=caminho.parent)
     try:
@@ -97,6 +110,13 @@ def tasks_pendentes(plano: PlanoTasks, manifesto: Manifesto | None) -> tuple[Tas
     """Devolve as Tasks do plano que ainda não foram criadas, bloqueando reconciliação pendente."""
     if manifesto is None:
         return plano.tasks
+    if manifesto.em_andamento:
+        titulos = ", ".join(sorted(manifesto.em_andamento))
+        raise ErroReconciliacaoNecessaria(
+            f"A criação de {titulos} foi tentada mas o desfecho é desconhecido (a chamada "
+            "falhou depois de possivelmente já ter criado a Task no Azure Boards); "
+            "verifique manualmente no Azure Boards antes de prosseguir."
+        )
     hash_atual = calcular_hash_plano(plano)
     if manifesto.hash_plano != hash_atual:
         if manifesto.criadas:

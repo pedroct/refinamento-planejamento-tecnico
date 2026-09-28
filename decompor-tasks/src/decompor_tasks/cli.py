@@ -11,15 +11,25 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 
 from decompor_tasks.ancoragem_horas import sugerir_horas
-from decompor_tasks.cliente_azure_devops import ClienteAzureDevOps
+from decompor_tasks.cliente_azure_devops import (
+    ClienteAzureDevOps,
+    ErroDestinoInvalido,
+    ErroFalhaTransitoria,
+    ErroRespostaInvalida,
+)
 from decompor_tasks.configuracao import ErroConfiguracao, carregar_configuracao
 from decompor_tasks.criar_tasks import ErroConfirmacaoInvalida, criar_tasks_pendentes
 from decompor_tasks.manifesto import (
+    ErroReconciliacaoNecessaria,
     PlanoTasks,
     TaskProposta,
     ler_manifesto,
     montar_frase_autorizacao,
 )
+
+
+class ErroPlanoInvalido(ValueError):
+    """O arquivo do plano não existe ou não tem o formato esperado (historia_id + tasks)."""
 
 
 def executar(
@@ -35,6 +45,15 @@ def executar(
     except ErroConfiguracao as erro:
         print(f"Configuração inválida: {erro}")
         return 2
+    except ErroPlanoInvalido as erro:
+        print(str(erro))
+        return 1
+    except ErroReconciliacaoNecessaria as erro:
+        print(str(erro))
+        return 1
+    except (ErroDestinoInvalido, ErroFalhaTransitoria, ErroRespostaInvalida) as erro:
+        print(f"Falha ao falar com o Azure Boards: {erro}")
+        return 1
     parser.error("comando desconhecido")
     return 2
 
@@ -72,9 +91,17 @@ def _sugerir_horas(args: argparse.Namespace, env: Mapping[str, str]) -> int:
 
 
 def _carregar_plano(caminho: str) -> PlanoTasks:
-    dados = json.loads(Path(caminho).read_text(encoding="utf-8"))
-    tasks = tuple(TaskProposta(**t) for t in dados["tasks"])
-    return PlanoTasks(historia_id=dados["historia_id"], tasks=tasks)
+    caminho_plano = Path(caminho)
+    if not caminho_plano.is_file():
+        raise ErroPlanoInvalido(f"Plano não encontrado: {caminho}")
+    try:
+        dados = json.loads(caminho_plano.read_text(encoding="utf-8"))
+        tasks = tuple(TaskProposta(**t) for t in dados["tasks"])
+        return PlanoTasks(historia_id=dados["historia_id"], tasks=tasks)
+    except (json.JSONDecodeError, KeyError, TypeError) as erro:
+        raise ErroPlanoInvalido(
+            f"Plano em {caminho} não tem o formato esperado (historia_id e tasks): {erro}"
+        ) from erro
 
 
 def _imprimir_plano(plano: PlanoTasks) -> None:

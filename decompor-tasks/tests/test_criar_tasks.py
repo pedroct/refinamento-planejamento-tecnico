@@ -8,7 +8,14 @@ from decompor_tasks.criar_tasks import (
     criar_tasks_pendentes,
     montar_operacoes_criacao,
 )
-from decompor_tasks.manifesto import Manifesto, PlanoTasks, TaskProposta, ler_manifesto
+from decompor_tasks.manifesto import (
+    ErroReconciliacaoNecessaria,
+    Manifesto,
+    PlanoTasks,
+    TaskProposta,
+    ler_manifesto,
+    tasks_pendentes,
+)
 
 _TASK_A = TaskProposta(titulo="Task A", original_estimate=4.0, remaining=4.0, assigned_to="dev@x")
 _TASK_B = TaskProposta(titulo="Task B", original_estimate=2.0, remaining=2.0, assigned_to="dev@x")
@@ -22,6 +29,21 @@ class ClienteFalso:
     def criar_work_item(self, tipo: str, operacoes: list[dict[str, Any]]) -> dict[str, Any]:
         self.chamadas.append((tipo, operacoes))
         return {"id": next(self._ids)}
+
+
+class ClienteFalhaNaSegundaTask:
+    """Simula uma falha ambígua (timeout/5xx) na criação da Task B: a chamada levanta uma
+    exceção, mas na vida real o Azure Boards pode já ter criado o work item do lado de lá."""
+
+    def __init__(self) -> None:
+        self.chamadas: list[tuple[str, list[dict[str, Any]]]] = []
+
+    def criar_work_item(self, tipo: str, operacoes: list[dict[str, Any]]) -> dict[str, Any]:
+        self.chamadas.append((tipo, operacoes))
+        titulo = next(op["value"] for op in operacoes if op["path"] == "/fields/System.Title")
+        if titulo == "Task B":
+            raise RuntimeError("timeout simulado após possível criação no servidor")
+        return {"id": 501}
 
 
 def test_operacoes_nunca_incluem_story_points() -> None:
@@ -88,3 +110,49 @@ def test_cria_so_as_tasks_pendentes_e_atualiza_manifesto_apos_cada_uma(tmp_path:
     assert len(cliente.chamadas) == 1  # só a Task B, que ainda não existia
     assert resultado.criadas == {"Task A": 501, "Task B": 502}
     assert ler_manifesto(caminho) == resultado
+
+
+def test_falha_ambigua_registra_em_andamento_e_reexecucao_exige_reconciliacao(
+    tmp_path: Path,
+) -> None:
+    """Se `criar_work_item` levanta depois de a Task já poder ter sido criada no servidor
+    (resposta ambígua), o manifesto grava a marca de "em andamento" para aquela Task ANTES
+    da chamada — mesmo com a exceção propagando — e uma reexecução não deve recriar a Task
+    silenciosamente: deve exigir reconciliação manual, nomeando a Task, sem nova chamada."""
+    plano = PlanoTasks(historia_id=100, tasks=(_TASK_A, _TASK_B))
+    caminho = tmp_path / "manifesto.json"
+    cliente = ClienteFalhaNaSegundaTask()
+
+    with pytest.raises(RuntimeError, match="timeout simulado"):
+        criar_tasks_pendentes(
+            cliente,
+            organizacao="org",
+            projeto="proj",
+            tipo_task="Task",
+            plano=plano,
+            manifesto_atual=None,
+            caminho_manifesto=caminho,
+            resposta_confirmacao="AUTORIZAR TASKS #100",
+        )
+
+    assert len(cliente.chamadas) == 2  # Task A criada com sucesso, Task B falhou ao responder
+    manifesto_persistido = ler_manifesto(caminho)
+    assert manifesto_persistido is not None
+    assert manifesto_persistido.criadas == {"Task A": 501}
+    assert manifesto_persistido.em_andamento == frozenset({"Task B"})
+
+    with pytest.raises(ErroReconciliacaoNecessaria, match="Task B"):
+        tasks_pendentes(plano, manifesto_persistido)
+
+    with pytest.raises(ErroReconciliacaoNecessaria, match="Task B"):
+        criar_tasks_pendentes(
+            cliente,
+            organizacao="org",
+            projeto="proj",
+            tipo_task="Task",
+            plano=plano,
+            manifesto_atual=manifesto_persistido,
+            caminho_manifesto=caminho,
+            resposta_confirmacao="AUTORIZAR TASKS #100",
+        )
+    assert len(cliente.chamadas) == 2  # nenhuma chamada adicional na reexecução bloqueada
