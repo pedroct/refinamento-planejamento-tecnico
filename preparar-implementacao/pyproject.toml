@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling==1.29.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "preparar-implementacao"
+version = "0.1.0"
+description = "Briefing de implementação a partir de um work item já publicado e refinado"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "httpx==0.28.1",
+  "pydantic==2.13.5",
+  "pydantic-settings==2.15.0",
+]
+
+[project.scripts]
+preparar-implementacao = "preparar_implementacao:main"
+
+[dependency-groups]
+dev = [
+  "mypy==2.1.0",
+  "pytest==9.0.3",
+  "ruff==0.15.14",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/preparar_implementacao"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [".venv/", ".git/"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**/*.py" = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
