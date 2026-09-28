@@ -65,3 +65,23 @@ def test_usuario_autenticado_devolve_perfil() -> None:
     )
     with _cliente(handler) as cliente:
         assert cliente.usuario_autenticado()["emailAddress"] == "dev@time"
+
+
+def test_criar_work_item_nao_retenta_em_falha_transitoria() -> None:
+    """Escritas (criar_work_item) nunca devem retentar automaticamente.
+
+    Se Azure DevOps retorna 503 após criar o item, não se sabe se foi realmente criado.
+    Retentar causaria duplicação silenciosa. Deve falhar imediatamente após UMA tentativa.
+    """
+    chamadas = {"count": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        chamadas["count"] += 1
+        return httpx.Response(503, json={})
+
+    with _cliente(httpx.MockTransport(handler)) as cliente, pytest.raises(ErroFalhaTransitoria):
+        cliente.criar_work_item(
+            "Task", [{"op": "add", "path": "/fields/System.Title", "value": "T1"}]
+        )
+    # Deve ter feito exatamente 1 chamada, não 3 (como faria uma leitura retentável)
+    assert chamadas["count"] == 1

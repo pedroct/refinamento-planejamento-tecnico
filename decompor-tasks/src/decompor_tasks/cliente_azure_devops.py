@@ -86,13 +86,19 @@ class ClienteAzureDevOps:
         return ids
 
     def criar_work_item(self, tipo: str, operacoes: list[dict[str, Any]]) -> dict[str, Any]:
-        """Cria um work item do tipo informado, com a lista de operações JSON Patch dada."""
+        """Cria um work item do tipo informado, com a lista de operações JSON Patch dada.
+
+        Usa uma única tentativa sem retry automático: se Azure DevOps retorna um código
+        retentável (500/502/503) após criar o item, não se sabe se o item foi de fato criado.
+        Repetir automaticamente causaria duplicação silenciosa. Reconhecimento de ambiguidade
+        e reconciliação ficam a cargo da camada chamadora.
+        """
         url = (
             f"https://dev.azure.com/{self._organizacao}/{self._projeto}"
             f"/_apis/wit/workitems/${tipo}?api-version={_VERSAO_API}"
         )
         resposta = self._executar(
-            "POST", url, corpo=operacoes, content_type="application/json-patch+json"
+            "POST", url, corpo=operacoes, content_type="application/json-patch+json", retentavel=False
         )
         return self._verificar_e_decodificar(resposta, None)
 
@@ -111,8 +117,26 @@ class ClienteAzureDevOps:
         *,
         corpo: Any = None,
         content_type: str | None = None,
+        retentavel: bool = True,
     ) -> httpx.Response:
         headers = {"Content-Type": content_type} if content_type else None
+
+        # Para operações não-retentáveis (escritas), uma única tentativa sem retry
+        if not retentavel:
+            try:
+                resposta = self._cliente.request(metodo, url, json=corpo, headers=headers)
+            except httpx.RequestError as erro:
+                raise ErroFalhaTransitoria(
+                    f"A chamada {metodo} {url} falhou por erro de rede."
+                ) from erro
+            if resposta.status_code in _ERROS_RETENTAVEIS:
+                raise ErroFalhaTransitoria(
+                    f"A chamada {metodo} {url} não se completou "
+                    f"(HTTP {resposta.status_code})."
+                )
+            return resposta
+
+        # Para operações retentáveis (leituras), retry com backoff
         for tentativa in range(_MAX_TENTATIVAS):
             try:
                 resposta = self._cliente.request(metodo, url, json=corpo, headers=headers)
@@ -130,7 +154,6 @@ class ClienteAzureDevOps:
                         f"(HTTP {resposta.status_code}) após {_MAX_TENTATIVAS} tentativas."
                     )
             time.sleep(self._espera_inicial * (2**tentativa))
-        raise ErroFalhaTransitoria(f"A chamada {metodo} {url} não se completou.")
 
     def _verificar_e_decodificar(
         self, resposta: httpx.Response, work_item_id: int | None
