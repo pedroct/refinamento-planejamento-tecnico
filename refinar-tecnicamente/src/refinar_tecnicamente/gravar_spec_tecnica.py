@@ -81,12 +81,19 @@ def gravar_spec_tecnica(
     campo: str,
     spec_md: str,
     resposta_confirmacao: str,
+    html: str | None = None,
 ) -> None:
-    """Grava a spec técnica convertida, só após confirmação textual exata."""
+    """Grava a spec técnica convertida, só após confirmação textual exata.
+
+    `html` é o HTML já convertido e validado (o chamador — a CLI — converte antes de mostrar
+    o conteúdo para confirmação, como exige o fluxo de escrita). Quando omitido, esta função
+    converte internamente como rede de segurança; como `converter_para_html` é pura, produz
+    o mesmo resultado para o mesmo `spec_md`.
+    """
     frase_esperada = montar_frase_autorizacao(id_demanda)
     if resposta_confirmacao.strip() != frase_esperada:
         raise ErroConfirmacaoInvalida(
             "Confirmação ausente, incorreta ou vinculada a outra Demanda; nenhuma gravação foi feita."
         )
-    html = converter_para_html(spec_md)
-    cliente.gravar_campo(id_demanda, campo, html)
+    html_final = html if html is not None else converter_para_html(spec_md)
+    cliente.gravar_campo(id_demanda, campo, html_final)
