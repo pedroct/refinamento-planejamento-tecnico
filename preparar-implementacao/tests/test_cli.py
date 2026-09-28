@@ -121,3 +121,44 @@ def test_montar_sem_spec_tecnica_recusa_e_nomeia_a_lacuna(
     assert "spec técnica" in saida
     assert "Custom.DemandaSpecTecnica" in saida
     assert "Traceback" not in saida
+
+
+def test_montar_sem_spec_tecnica_nomeia_o_campo_configurado_quando_customizado(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    itens = {
+        _ID_HISTORIA: _historia(com_criterios=True),
+        _ID_DEMANDA: _demanda(com_spec_tecnica=False),
+        _ID_TASK: _task(com_estimativas=True),
+    }
+    _instalar_cliente_falso(monkeypatch, itens)
+    env = {**_ENV, "AZURE_DEVOPS_CAMPO_SPEC_TECNICA": "Custom.OutroCampo"}
+
+    codigo = executar(["montar", str(_ID_HISTORIA)], env=env)
+
+    saida = capsys.readouterr().out
+    assert codigo == 1
+    assert "Custom.OutroCampo" in saida
+
+
+def test_montar_com_hierarquia_incompleta_devolve_mensagem_limpa(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # A História não tem relação de pai — a cadeia nunca alcança a Demanda de Negócio.
+    historia_sem_pai = {
+        "id": _ID_HISTORIA,
+        "fields": {
+            "System.Title": "Renovar diligência automaticamente",
+            "System.WorkItemType": "User Story",
+            "Microsoft.VSTS.Common.AcceptanceCriteria": "<p>Dado que...</p>",
+        },
+        "relations": [],
+    }
+    itens = {_ID_HISTORIA: historia_sem_pai}
+    _instalar_cliente_falso(monkeypatch, itens)
+
+    codigo = executar(["montar", str(_ID_HISTORIA)], env=_ENV)
+
+    saida = capsys.readouterr().out
+    assert codigo == 1
+    assert "Traceback" not in saida

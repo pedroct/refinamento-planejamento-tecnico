@@ -14,11 +14,17 @@ def verificar_suficiencia(
     spec_tecnica: str | None,
     criterios_aceitacao: str | None,
     tasks: list[dict[str, Any]],
+    campo_spec_tecnica: str = "Custom.DemandaSpecTecnica",
 ) -> None:
-    """Levanta uma única exceção nomeando todas as lacunas bloqueantes encontradas."""
+    """Levanta uma única exceção nomeando todas as lacunas bloqueantes encontradas.
+
+    `campo_spec_tecnica` nomeia, na mensagem, o campo de fato configurado (via
+    `AZURE_DEVOPS_CAMPO_SPEC_TECNICA`) — nunca o nome padrão hardcoded, que pode divergir do
+    que está configurado no ambiente.
+    """
     lacunas: list[str] = []
     if not spec_tecnica:
-        lacunas.append("a Demanda não tem spec técnica registrada em Custom.DemandaSpecTecnica")
+        lacunas.append(f"a Demanda não tem spec técnica registrada em {campo_spec_tecnica}")
     if not criterios_aceitacao:
         lacunas.append("a História/Bug não tem critério de aceitação preenchido")
     if not tasks:

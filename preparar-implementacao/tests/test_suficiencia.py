@@ -52,6 +52,16 @@ def test_sem_spec_tecnica_nomeia_a_lacuna() -> None:
         )
 
 
+def test_sem_spec_tecnica_nomeia_o_campo_configurado_quando_customizado() -> None:
+    with pytest.raises(ErroSuficienciaInsuficiente, match="Custom.OutroCampo"):
+        verificar_suficiencia(
+            spec_tecnica=None,
+            criterios_aceitacao="<p>x</p>",
+            tasks=[_task_estimada("Task A")],
+            campo_spec_tecnica="Custom.OutroCampo",
+        )
+
+
 def test_sem_criterios_de_aceitacao_nomeia_a_lacuna() -> None:
     with pytest.raises(ErroSuficienciaInsuficiente, match="critério de aceitação"):
         verificar_suficiencia(

@@ -7,10 +7,15 @@ import argparse
 from collections.abc import Mapping
 
 from preparar_implementacao.briefing import montar_briefing
-from preparar_implementacao.cliente_azure_devops import ClienteAzureDevOps
+from preparar_implementacao.cliente_azure_devops import (
+    ClienteAzureDevOps,
+    ErroDestinoInvalido,
+    ErroFalhaTransitoria,
+    ErroRespostaInvalida,
+)
 from preparar_implementacao.configuracao import ErroConfiguracao, carregar_configuracao
 from preparar_implementacao.contexto import extrair_campo_demanda, ids_tasks_filhas, ler_tasks
-from preparar_implementacao.hierarquia import subir_ate_demanda
+from preparar_implementacao.hierarquia import ErroHierarquiaIncompleta, subir_ate_demanda
 from preparar_implementacao.suficiencia import ErroSuficienciaInsuficiente, verificar_suficiencia
 
 
@@ -40,10 +45,19 @@ def executar(argv: list[str], *, env: Mapping[str, str]) -> int:
             tasks = ler_tasks(cliente, ids_tasks_filhas(work_item))
             criterios = work_item["fields"].get("Microsoft.VSTS.Common.AcceptanceCriteria")
             verificar_suficiencia(
-                spec_tecnica=spec_tecnica, criterios_aceitacao=criterios, tasks=tasks
+                spec_tecnica=spec_tecnica,
+                criterios_aceitacao=criterios,
+                tasks=tasks,
+                campo_spec_tecnica=config.campo_spec_tecnica,
             )
     except ErroSuficienciaInsuficiente as erro:
         print(str(erro))
+        return 1
+    except ErroHierarquiaIncompleta as erro:
+        print(str(erro))
+        return 1
+    except (ErroDestinoInvalido, ErroFalhaTransitoria, ErroRespostaInvalida) as erro:
+        print(f"Falha ao falar com o Azure Boards: {erro}")
         return 1
     briefing = montar_briefing(
         work_item=work_item,
