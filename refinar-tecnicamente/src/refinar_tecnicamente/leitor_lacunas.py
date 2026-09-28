@@ -14,6 +14,13 @@ _ITEM_ROTULADO = re.compile(
 )
 _ITEM_SIMPLES = re.compile(r"^- (?P<pergunta>.+)$")
 _EVIDENCIA = re.compile(r"^\s*<!--\s*evidência:\s*(?P<evidencia>.+?)\s*-->\s*$")
+_ITEM_AMBIGUO = re.compile(r"^- \*\*[^*]*\*\*")
+
+
+class ErroLacunaAmbigua(ValueError):
+    """Levantado quando uma lacuna parece ser rotulada mas não segue o padrão exato."""
+
+    pass
 
 
 @dataclass(frozen=True)
@@ -46,6 +53,11 @@ def ler_lacunas(spec_md: str) -> list[Lacuna]:
                 "evidencia": None,
             }
             continue
+        ambiguo = _ITEM_AMBIGUO.match(linha)
+        if ambiguo:
+            raise ErroLacunaAmbigua(
+                f"Lacuna parece rotulada mas não segue o padrão exato: {linha}"
+            )
         evidencia = _EVIDENCIA.match(linha)
         if evidencia and pendente is not None:
             pendente["evidencia"] = evidencia.group("evidencia")

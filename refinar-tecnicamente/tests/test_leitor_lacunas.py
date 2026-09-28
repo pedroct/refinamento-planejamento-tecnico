@@ -1,4 +1,11 @@
-from refinar_tecnicamente.leitor_lacunas import Lacuna, filtrar_tecnicas, ler_lacunas
+import pytest
+
+from refinar_tecnicamente.leitor_lacunas import (
+    ErroLacunaAmbigua,
+    Lacuna,
+    filtrar_tecnicas,
+    ler_lacunas,
+)
 
 SPEC_COM_ROTULOS = """# Spec
 
@@ -60,3 +67,36 @@ def test_filtrar_tecnicas_inclui_sem_rotulo() -> None:
     lacunas = ler_lacunas(SPEC_SEM_ROTULOS)
     tecnicas = filtrar_tecnicas(lacunas)
     assert len(tecnicas) == 2
+
+
+def test_lacuna_ambigua_separador_errado() -> None:
+    spec = """# Spec
+
+## Lacunas e perguntas abertas
+
+- **N3 - Negócio** — pergunta
+"""
+    with pytest.raises(ErroLacunaAmbigua):
+        ler_lacunas(spec)
+
+
+def test_lacuna_ambigua_casing_errado() -> None:
+    spec = """# Spec
+
+## Lacunas e perguntas abertas
+
+- **N3 · negócio** — pergunta
+"""
+    with pytest.raises(ErroLacunaAmbigua):
+        ler_lacunas(spec)
+
+
+def test_lacuna_ambigua_dash_errado() -> None:
+    spec = """# Spec
+
+## Lacunas e perguntas abertas
+
+- **N3 · Negócio** - pergunta
+"""
+    with pytest.raises(ErroLacunaAmbigua):
+        ler_lacunas(spec)
