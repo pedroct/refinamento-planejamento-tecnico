@@ -116,9 +116,6 @@ A instalação pode ser por projeto (padrão) ou global:
 npx skills add pedroct/refinamento-planejamento-tecnico --all -a claude-code -g
 ```
 
-Cada skill tem seu próprio `.env.example` — copie para `.env` e preencha organização, projeto e
-token do Azure DevOps antes de usar. O token nunca deve ser versionado.
-
 ### Atualização
 
 ```bash
@@ -174,6 +171,57 @@ cd decompor-tasks
 uv sync
 uv run pytest
 ```
+
+## Configuração
+
+Cada skill é um pacote isolado e lê suas próprias variáveis de ambiente — não existe configuração
+compartilhada na raiz do projeto (o `.env` da raiz é só para `SONAR_TOKEN`, usado pelo scan local,
+ver [Qualidade de código](#qualidade-de-código)).
+
+### 1. Gerar o PAT do Azure DevOps
+
+Em `https://dev.azure.com/<sua-organização>/_usage/token`, crie um Personal Access Token com escopo
+**Work Items → Read & Write**. É o mesmo PAT que pode ser reaproveitado nas três skills, desde que
+tenha acesso ao projeto usado por todas.
+
+### 2. Preencher o `.env` de cada skill
+
+Copie o `.env.example` de cada skill para `.env` na mesma pasta e preencha:
+
+```bash
+cp refinar-tecnicamente/.env.example refinar-tecnicamente/.env
+cp decompor-tasks/.env.example decompor-tasks/.env
+cp preparar-implementacao/.env.example preparar-implementacao/.env
+```
+
+| Variável | `refinar-tecnicamente` | `decompor-tasks` | `preparar-implementacao` |
+|---|---|---|---|
+| `AZURE_DEVOPS_ORGANIZACAO` | ✅ | ✅ | ✅ |
+| `AZURE_DEVOPS_PROJETO` | ✅ | ✅ | ✅ |
+| `AZURE_DEVOPS_TOKEN` | ✅ | ✅ | ✅ |
+| `AZURE_DEVOPS_CAMPO_SPEC_TECNICA` | ✅ (`Custom.DemandaSpecTecnica`) | — | ✅ (`Custom.DemandaSpecTecnica`) |
+| `AZURE_DEVOPS_CAMPO_SPEC_NEGOCIOS` | — | — | ✅ (`Custom.DemandaSpecNegocios`) |
+| `AZURE_DEVOPS_TIPO_TASK` | — | ✅ (`Task`) | — |
+| `AZURE_DEVOPS_TIPO_DEMANDA` | — | — | ✅ (`Demanda de Negócio`) |
+
+O `.env.example` já vem com os valores padrão preenchidos para os campos e tipos — normalmente só
+`ORGANIZACAO`, `PROJETO` e `TOKEN` ficam em branco para você completar. O `.env` nunca deve ser
+versionado (já está no `.gitignore`).
+
+### 3. Exportar as variáveis antes de rodar os comandos
+
+**Nenhuma das skills lê o `.env` automaticamente.** O `.env` é só um lugar para guardar os valores —
+quem os coloca no ambiente é você, antes de chamar o comando:
+
+```bash
+cd refinar-tecnicamente
+uv sync   # só na primeira vez, ou após atualizar dependências
+export $(grep -v '^#' .env | xargs)
+uv run refinar-tecnicamente sugerir-story-points --area-path "Projeto\Time A" --tipo "User Story"
+```
+
+Isso vale para as três skills, sempre a partir da pasta da skill correspondente (cada uma tem seu
+próprio `.env`, então exportar o de uma não configura as outras).
 
 ## Qualidade de código
 
