@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import os
+import sys
+
 
 def main() -> None:
-    """Ponto de entrada da CLI; implementado na Task 5."""
-    raise SystemExit("CLI ainda não implementada — veja o Task 5 do plano.")
+    from refinar_tecnicamente.cli import executar
+
+    raise SystemExit(executar(sys.argv[1:], env=os.environ))
