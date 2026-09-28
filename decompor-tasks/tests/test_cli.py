@@ -51,6 +51,40 @@ def test_confirmacao_mostra_o_conteudo_exato_do_plano_antes_da_frase(
     assert "dev@x" in saida
 
 
+def test_criar_com_plano_inexistente_devolve_mensagem_limpa(
+    tmp_path: Path, capsys: object
+) -> None:
+    codigo = executar(
+        [
+            "criar",
+            str(tmp_path / "nao-existe.json"),
+            "--manifesto",
+            str(tmp_path / "manifesto.json"),
+        ],
+        env=_ENV,
+        entrada=lambda _prompt: "não deveria ser chamado",
+    )
+    saida = capsys.readouterr().out  # type: ignore[attr-defined]
+    assert codigo == 1
+    assert "Traceback" not in saida
+    assert "nao-existe.json" in saida
+
+
+def test_criar_com_plano_malformado_devolve_mensagem_limpa(
+    tmp_path: Path, capsys: object
+) -> None:
+    plano_json = tmp_path / "plano.json"
+    plano_json.write_text('{"historia_id": 100}', encoding="utf-8")  # falta "tasks"
+    codigo = executar(
+        ["criar", str(plano_json), "--manifesto", str(tmp_path / "manifesto.json")],
+        env=_ENV,
+        entrada=lambda _prompt: "não deveria ser chamado",
+    )
+    saida = capsys.readouterr().out  # type: ignore[attr-defined]
+    assert codigo == 1
+    assert "Traceback" not in saida
+
+
 def test_sugerir_horas_sem_configuracao_devolve_erro(capsys: object) -> None:
     codigo = executar(
         ["sugerir-horas", "--area-path", "proj\\Time A", "--titulo", "Criar endpoint"],
