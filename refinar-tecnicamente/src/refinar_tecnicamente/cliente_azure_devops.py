@@ -89,14 +89,24 @@ class ClienteAzureDevOps:
         return ids
 
     def gravar_campo(self, work_item_id: int, campo: str, valor: str) -> None:
-        """Grava um único campo por PATCH, usando JSON Patch (`replace`)."""
+        """Grava um único campo por PATCH, usando JSON Patch (`replace`).
+
+        Usa uma única tentativa sem retry automático: se o Azure DevOps retorna um código
+        retentável (500/502/503) depois de já ter aplicado o PATCH, não se sabe se a escrita
+        de fato aconteceu. Repetir automaticamente arrisca mascarar essa ambiguidade.
+        Reconhecimento de ambiguidade e reconciliação ficam a cargo da camada chamadora.
+        """
         url = (
             f"https://dev.azure.com/{self._organizacao}/{self._projeto}"
             f"/_apis/wit/workitems/{work_item_id}?api-version={_VERSAO_API}"
         )
         payload = [{"op": "replace", "path": f"/fields/{campo}", "value": valor}]
         resposta = self._executar(
-            "PATCH", url, corpo=payload, content_type="application/json-patch+json"
+            "PATCH",
+            url,
+            corpo=payload,
+            content_type="application/json-patch+json",
+            retentavel=False,
         )
         self._verificar_e_decodificar(resposta, work_item_id)
 
@@ -116,8 +126,26 @@ class ClienteAzureDevOps:
         *,
         corpo: Any = None,
         content_type: str | None = None,
+        retentavel: bool = True,
     ) -> httpx.Response:
         headers = {"Content-Type": content_type} if content_type else None
+
+        # Para operações não-retentáveis (escritas), uma única tentativa sem retry
+        if not retentavel:
+            try:
+                resposta = self._cliente.request(metodo, url, json=corpo, headers=headers)
+            except httpx.RequestError as erro:
+                raise ErroFalhaTransitoria(
+                    f"A chamada {metodo} {url} falhou por erro de rede."
+                ) from erro
+            if resposta.status_code in _ERROS_RETENTAVEIS:
+                raise ErroFalhaTransitoria(
+                    f"A chamada {metodo} {url} não se completou "
+                    f"(HTTP {resposta.status_code})."
+                )
+            return resposta
+
+        # Para operações retentáveis (leituras), retry com backoff
         for tentativa in range(_MAX_TENTATIVAS):
             try:
                 resposta = self._cliente.request(metodo, url, json=corpo, headers=headers)
