@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling==1.29.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "decompor-tasks"
+version = "0.1.0"
+description = "Decomposição de uma História/Bug em Tasks estimadas em horas, no planning"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "httpx==0.28.1",
+  "pydantic==2.13.5",
+  "pydantic-settings==2.15.0",
+]
+
+[project.scripts]
+decompor-tasks = "decompor_tasks:main"
+
+[dependency-groups]
+dev = [
+  "mypy==2.1.0",
+  "pytest==9.0.3",
+  "ruff==0.15.14",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/decompor_tasks"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [".venv/", ".git/"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**/*.py" = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
