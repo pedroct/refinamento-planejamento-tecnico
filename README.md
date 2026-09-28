@@ -175,6 +175,26 @@ uv sync
 uv run pytest
 ```
 
+## Qualidade de código
+
+Cada pacote tem sua própria suíte, isolada: `uv run --directory <pacote> pytest`, mais `mypy` e
+`ruff` (strict, configurados no `pyproject.toml` de cada skill). Não há teste combinado na raiz —
+os três pacotes não compartilham ambiente nem `sys.path`.
+
+O scan local do SonarQube cobre as três skills numa única análise:
+
+```bash
+cp .env.example .env   # preencha SONAR_TOKEN, uma vez
+bash scripts/run-sonar-local.sh
+```
+
+O script gera o `coverage.xml` de cada pacote separadamente (`uv run --directory <pacote> pytest
+--cov`) antes de rodar o `pysonar` — rodar tudo num único `pytest` combinado esconderia a cobertura
+real de cada skill, já que cada uma tem seu próprio ambiente. `cliente_azure_devops.py` é vendorizado
+à parte em cada skill (nenhuma importa módulo de skill irmã, de propósito — ver o docstring do
+próprio arquivo), então essa duplicação entre elas é excluída do CPD (`sonar.cpd.exclusions` em
+`sonar-project.properties`): é arquitetural, não um defeito a corrigir.
+
 ## Pré-requisitos
 
 - `gerador-hu` publicado e configurado, com uma spec (`spec.md`) já gerada para a Demanda.
