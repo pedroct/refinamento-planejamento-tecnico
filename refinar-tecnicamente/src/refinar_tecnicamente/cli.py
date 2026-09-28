@@ -85,7 +85,11 @@ def _gravar_spec_tecnica(
     args: argparse.Namespace, env: Mapping[str, str], entrada: Callable[[str], str]
 ) -> int:
     config = carregar_configuracao(env)
-    spec_md = Path(args.spec).read_text(encoding="utf-8")
+    caminho_spec = Path(args.spec)
+    if not caminho_spec.is_file():
+        print(f"Spec não encontrada: {args.spec}")
+        return 1
+    spec_md = caminho_spec.read_text(encoding="utf-8")
     frase = montar_frase_autorizacao(args.demanda)
     print(f"Digite exatamente a frase abaixo para confirmar a gravação em {args.campo}:")
     print(frase)

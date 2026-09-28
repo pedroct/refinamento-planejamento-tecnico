@@ -53,3 +53,27 @@ def test_gravar_spec_tecnica_sem_confirmacao_exata_nao_chama_rede(
     saida = capsys.readouterr().out  # type: ignore[attr-defined]
     assert codigo != 0
     assert "13959" in saida  # a frase esperada foi mostrada, nomeando a Demanda
+
+
+def test_gravar_spec_tecnica_com_arquivo_inexistente_devolve_codigo_de_erro(
+    capsys: object,
+) -> None:
+    def _entrada_nao_deveria_ser_chamada(_prompt: str) -> str:
+        raise AssertionError(
+            "entrada() não deveria ser chamada quando a spec não existe"
+        )
+
+    codigo = executar(
+        [
+            "gravar-spec-tecnica",
+            "--demanda",
+            "13959",
+            "--spec",
+            "/caminho/que/nao/existe.md",
+        ],
+        env=_ENV,
+        entrada=_entrada_nao_deveria_ser_chamada,
+    )
+    saida = capsys.readouterr().out  # type: ignore[attr-defined]
+    assert codigo != 0
+    assert "/caminho/que/nao/existe.md" in saida
