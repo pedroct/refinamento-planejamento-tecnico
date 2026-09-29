@@ -2,130 +2,130 @@
 
 ## Contexto
 
-`refinar-tecnicamente/gravar_spec_tecnica.py` converte a spec (`spec.md`) para HTML via
-`MarkdownIt("commonmark", {"html": False})` e grava esse HTML em `Custom.DemandaSpecTecnica` através
-de `gravar_campo` (PATCH). Essa conversão partiu do pressuposto de que o campo era um campo HTML rico
-— o mesmo padrão de `System.Description`/`Acceptance Criteria`, tratado pela spec irmã
+`refinar-tecnicamente/gravar_spec_tecnica.py` convertia a spec (`spec.md`) para HTML via
+`MarkdownIt("commonmark", {"html": False})` e gravava esse HTML em `Custom.DemandaSpecTecnica`
+através de `gravar_campo` (PATCH). Essa conversão partiu do pressuposto de que o campo era um campo
+HTML rico — o mesmo padrão de `System.Description`/`Acceptance Criteria`, tratado pela spec irmã
 `2026-09-29-whitelist-html-azure-boards-design.md` (`gerador-hu`).
 
-Esse pressuposto está errado. Evidência coletada diretamente na Demanda de Negócio 14064, após uma
-gravação real feita pela skill:
+Investigação real na Demanda de Negócio 14064 revelou uma causa mais específica do que "HTML errado":
+**campos multilinha do Azure Boards (`Description`, `Repro Steps`, `Acceptance Criteria` e campos
+customizados de texto longo) têm um formato por gravação — HTML ou Markdown — controlado por uma
+propriedade separada do JSON Patch, `multilineFieldsFormat`, e não pelo conteúdo em si.** Quando o
+PATCH não inclui essa propriedade, **o Azure DevOps assume HTML por padrão**, mesmo que o valor
+enviado seja texto/Markdown puro sem nenhuma tag. Fonte:
+[Markdown Support Arrives for Work Items](https://devblogs.microsoft.com/devops/markdown-support-arrives-for-work-items/)
+(Azure DevOps Blog) — *"The default format is `HTML`"*; para gravar em Markdown, o PATCH precisa de
+duas operações:
 
-- O editor do campo na tela do work item mostra o aviso **"Markdown supported"**, com barra de
-  ferramentas de Markdown (negrito, itálico, link, código, listas) e um toggle **Preview** — a mesma UI
-  usada pelo Azure Boards para campos `Text (multiple lines)` com formato **Markdown**, não HTML.
-- O conteúdo efetivamente salvo no campo, em modo de edição, é a string HTML literal produzida pelo
-  conversor: `<h1>Spec: ...</h1>`, `<p>...</p>`, `<blockquote>...</blockquote>`, tabelas Markdown
-  (`| Código | Sigla | ... |` / `|---|---|...`) preservadas cruas dentro de um `<p>` — porque
-  `MarkdownIt("commonmark", ...)` não interpreta tabelas GFM, então elas atravessam a conversão como
-  texto comum.
-- Quando o Azure renderiza essa string como Markdown (modo Preview), ele descarta/ignora as tags HTML
-  desconhecidas para esse contexto e mantém só o texto interno — por isso o que a pessoa lê na tela é
-  prosa "limpa" sem tags visíveis, mas com a sintaxe de tabela (`|---|---|`) sobrando crua, já que o
-  parser Markdown não reconhece como tabela um bloco de texto que não começou como tal.
+```json
+[
+  { "op": "add", "path": "/fields/Custom.DemandaSpecTecnica", "value": "# seu texto em markdown" },
+  { "op": "add", "path": "/multilineFieldsFormat/Custom.DemandaSpecTecnica", "value": "Markdown" }
+]
+```
 
-Ou seja: o defeito não é "tabela não suportada" (a causa originalmente suspeitada) — é que **a
-conversão para HTML nunca deveria ter acontecido para este campo**. O campo já é Markdown nativo; a
-skill deveria gravar `spec.md` como está.
+Isso explica, em ordem, os três estados observados na Demanda 14064:
 
-Este é o mesmo tipo de campo (`Text (multiple lines)`) usado por `redigir-spec-demanda-azure-boards`
-para `negocio.md`/`spec.md` — mas aquela skill só lê (`GET`), nunca grava campo; não é afetada.
+1. **Gravação original** (`converter_para_html`, antes de qualquer correção): enviava HTML puro sem
+   `multilineFieldsFormat`. Como o padrão do Azure já é HTML, o conteúdo foi interpretado corretamente
+   como HTML — blocos (`<h1>`, `<p>`, `<blockquote>`) renderizaram como blocos de verdade. O único
+   defeito real dessa gravação era **tabela**: `MarkdownIt("commonmark", ...)` não produz `<table>`
+   (tabelas GFM não fazem parte do CommonMark puro), então cada tabela da spec virou texto cru com
+   pipes dentro de um `<p>`.
+2. **Primeira correção desta spec** (gravar `spec_md` cru, sem conversão, também sem
+   `multilineFieldsFormat`): o Azure continuou assumindo HTML por padrão — só que agora o valor
+   gravado era Markdown puro, sem nenhuma tag. Texto sem marcação, interpretado como HTML, tem toda
+   quebra de linha (`\n` ou `\r\n`) colapsada pelas regras normais de renderização HTML (espaço em
+   branco não-`<pre>` colapsa para um espaço). Resultado: o documento inteiro virou uma única linha
+   corrida — comprovado por um teste mínimo isolado (string de 3 linhas com `\r\n`, gravada e lida de
+   volta achatada em uma linha só, print em mão).
+3. **Consequência visível na UI**: o editor do campo alternou de um "modo Markdown" (barra simples,
+   aviso "Markdown supported", Preview) — herdado de uma gravação Markdown anterior de outra sessão —
+   para o editor rich-text clássico (B/I/U, cor, emoji, indentação) com o aviso "We support markdown,
+   you can convert this field", confirmando que a gravação sem `multilineFieldsFormat` fez o campo
+   voltar a HTML.
 
 ## Objetivo
 
-`gravar_spec_tecnica` passa a gravar o Markdown original (`spec_md`) em `Custom.DemandaSpecTecnica`,
-sem nenhuma conversão para HTML. A confirmação textual (`montar_frase_autorizacao`) e o restante do
-fluxo (upload/vínculo de `spec.md`/`backlog.md` como anexo) continuam exatamente como estão — a
-mudança é só o valor gravado no campo.
+`gravar_spec_tecnica` grava o Markdown original (`spec_md`) em `Custom.DemandaSpecTecnica`, **e**
+declara explicitamente o formato Markdown no mesmo PATCH via `multilineFieldsFormat`, para que o
+Azure Boards trate o valor como Markdown de verdade (preservando quebras de linha, tabelas — Azure
+Boards Markdown suporta tabela GFM nativamente — headers etc.) em vez de aplicar o padrão HTML.
 
 ## Fora de escopo
 
-- `System.Description`/`Acceptance Criteria` de Bug e User Story
-  (`publicar-backlog-azure-boards`/`publicar-backlog-demanda-azure-boards`, repositório `gerador-hu`):
-  o usuário suspeita do mesmo problema, mas ainda não confirmou o formato configurado nesses campos.
-  Frente separada, só depois de confirmação equivalente à desta spec.
-- Corrigir manualmente o conteúdo já gravado na Demanda 14064 no Azure Boards — é uma escrita real
-  em produção; fica a critério do usuário repetir `gravar-spec-tecnica` depois que o conserto estiver
-  implementado.
-- Qualquer sanitização própria de HTML/Markdown malicioso digitado na spec: o Azure Boards já
-  sanitiza o que renderiza no campo Markdown (evidenciado pelo próprio caso: as tags HTML gravadas
-  foram descartadas na renderização, não executadas) — não é responsabilidade desta skill duplicar
-  essa sanitização.
+- `System.Description`/`Acceptance Criteria` de Bug e User Story — mesma ressalva da versão anterior
+  desta spec: fica para confirmação e frente separada.
+- Reverter o campo de volta para HTML: a documentação da Microsoft é explícita — *"Once a work item is
+  saved with Markdown, it cannot be reverted back to HTML"* — e não há necessidade de reverter, já que
+  Markdown é o formato pretendido.
+- Qualquer sanitização própria de Markdown/HTML malicioso: fora de escopo, como já registrado na
+  versão anterior.
 
 ## Restrições globais
 
 - Conteúdo criado em português brasileiro.
-- Cada arquivo de código alterado tem seu teste equivalente atualizado (convenção do projeto —
-  [[cobertura-de-teste-por-arquivo]]).
+- Cada arquivo de código alterado tem seu teste equivalente atualizado
+  ([[cobertura-de-teste-por-arquivo]]).
 - Nenhuma mudança na frase de confirmação, no fluxo de anexo (`spec.md`/`backlog.md`) ou na
   ambiguidade tratada por `ErroAnexoAposCampoGravado`.
 
 ## Decisões de arquitetura
 
-### Remover a conversão para HTML, não escondê-la atrás de uma flag
+### `gravar_campo` passa a enviar as duas operações do JSON Patch
 
-`gravar_spec_tecnica.py` perde `_renderizar_markdown`, `converter_para_html`,
-`_ValidadorDeAninhamento`, `_ValidadorDeTagsPermitidas`, `ErroHtmlInvalido` e as constantes de
-whitelist (`_TAGS_HTML_PERMITIDAS`, `_TAGS_SEM_FECHAMENTO`) — código morto depois da correção, não
-mantido como opção alternativa. Não há cenário em que gravar HTML nesse campo seja o comportamento
-certo.
-
-`gravar_spec_tecnica(...)` perde o parâmetro `html`; passa a gravar `spec_md` diretamente:
+`ClienteAzureDevOps.gravar_campo` (único ponto que grava campos de work item nesta skill) monta o
+PATCH com duas entradas, na ordem documentada pela Microsoft (valor primeiro, formato depois):
 
 ```python
-def gravar_spec_tecnica(
-    cliente: _ClienteEscrita,
-    *,
-    id_demanda: int,
-    campo: str,
-    spec_md: str,
-    resposta_confirmacao: str,
-    backlog_md: str | None = None,
-) -> None:
-    ...
-    cliente.gravar_campo(id_demanda, campo, spec_md)
-    ...
+payload = [
+    {"op": "replace", "path": f"/fields/{campo}", "value": valor},
+    {"op": "add", "path": f"/multilineFieldsFormat/{campo}", "value": "Markdown"},
+]
 ```
 
-### CLI mostra o Markdown, não HTML, antes da confirmação
+Usar `add` para `multilineFieldsFormat` segue literalmente o exemplo documentado pela Microsoft — é o
+`op` usado mesmo quando o campo já tem um formato definido de uma gravação anterior (comportamento de
+upsert do lado do Azure, não um `add` estrito de RFC 6902 puro).
 
-`cli.py::_gravar_spec_tecnica` para de chamar `converter_para_html`/tratar `ErroHtmlInvalido`. A
-prévia mostrada ao usuário antes da frase de confirmação passa a ser o próprio conteúdo de `spec.md`
-(rotulada como Markdown, não HTML), para que a pessoa continue vendo exatamente o que vai ser gravado.
+Essa mudança fica em `gravar_campo` (não em `gravar_spec_tecnica`), porque `gravar_campo` é o único
+método de escrita de campo desta skill — hoje só é chamado para `Custom.DemandaSpecTecnica`, e
+declarar Markdown ali é correto para o único uso existente. Se uma futura skill desta base de código
+precisar gravar campo em HTML, esse método precisa ganhar um parâmetro explícito de formato — não
+existe hoje, não é necessário até existir esse segundo uso.
 
 ## Fluxo esperado
 
 ```text
 spec.md (Markdown)
   → lido do disco
-  → mostrado ao usuário como prévia (rotulado "Markdown", não HTML)
+  → mostrado ao usuário como prévia
   → frase de confirmação exata
-  → gravar_campo(id_demanda, campo, spec_md)  # sem conversão
+  → PATCH: [{"op":"replace","path":"/fields/<campo>","value":spec_md},
+            {"op":"add","path":"/multilineFieldsFormat/<campo>","value":"Markdown"}]
   → anexar_arquivo(spec.md) [+ backlog.md, quando informado]
 ```
 
 ## Testes de aceitação
 
-- Uma spec com título, parágrafo, tabela Markdown e lista é gravada **verbatim** — o valor passado a
-  `cliente.gravar_campo` é byte-a-byte igual ao conteúdo de `spec.md` (nenhuma tag `<h1>`/`<p>`/`<table>`
-  aparece no valor gravado).
-- A confirmação textual continua exigida e exata (`ErroConfirmacaoInvalida` nos mesmos casos de hoje).
-- O anexo de `spec.md`/`backlog.md` continua acontecendo depois da gravação do campo, com o mesmo
-  tratamento de `ErroAnexoAposCampoGravado` quando o anexo falha após o campo já ter sido gravado.
-- A CLI mostra o conteúdo de `spec.md` (não HTML) antes de pedir a frase de confirmação.
-- Os testes que hoje cobrem rejeição de HTML malformado/tag fora da whitelist/script embutido são
-  removidos — deixam de fazer sentido, porque não há mais conversão nem validação de HTML neste
-  caminho.
+- `gravar_campo` envia um PATCH com **duas** operações: a primeira grava o valor em
+  `/fields/<campo>`, a segunda declara `/multilineFieldsFormat/<campo>` = `"Markdown"`.
+- O teste decodifica o corpo da requisição capturada (JSON completo, não só `in bytes`) e confere as
+  duas operações, na ordem.
+- Os testes já existentes de `gravar_spec_tecnica` (gravação verbatim, confirmação exata, anexo,
+  `ErroAnexoAposCampoGravado`) continuam passando sem alteração de comportamento — a mudança é só no
+  formato do PATCH enviado por `gravar_campo`.
 
 ### Qualidade
 
-- Suíte de `refinar-tecnicamente` passa por completo, sem a dependência de `markdown-it-py` neste
-  módulo (a dependência pode continuar no `pyproject.toml` só se outro módulo da skill ainda a usar;
-  confirmar antes de removê-la).
-- Lint/format/type-check da skill continuam passando.
+- Suíte de `refinar-tecnicamente` passa por completo.
+- Antes de regravar a spec completa da Demanda 14064 em produção, um teste mínimo (string curta,
+  poucas linhas) confirma no Azure Boards real que a quebra de linha é preservada com o PATCH de duas
+  operações.
 
 ## Critério de conclusão
 
-`Custom.DemandaSpecTecnica` passa a receber exatamente o conteúdo de `spec.md`, sem nenhuma tag HTML
-nem perda de sintaxe (tabelas, headers) — comportamento comprovado por teste que compara o valor
-gravado byte-a-byte com o arquivo de entrada.
+Uma gravação de teste mínima em `Custom.DemandaSpecTecnica`, com `multilineFieldsFormat` declarado
+como Markdown, preserva quebras de linha no Azure Boards real — confirmado por evidência de tela — e
+só então a spec completa da Demanda 14064 é regravada.

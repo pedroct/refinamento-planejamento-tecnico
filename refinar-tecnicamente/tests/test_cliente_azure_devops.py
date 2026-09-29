@@ -152,6 +152,36 @@ def test_gravar_campo_envia_json_patch() -> None:
     assert b"Custom.DemandaSpecTecnica" in capturado["corpo"]  # type: ignore[operator]
 
 
+def test_gravar_campo_declara_multilineFieldsFormat_markdown() -> None:
+    """Sem essa segunda operação no PATCH, o Azure DevOps assume HTML por padrão (documentado
+    em https://devblogs.microsoft.com/devops/markdown-support-arrives-for-work-items/) — texto
+    Markdown puro gravado sem essa declaração tem toda quebra de linha colapsada, porque é
+    interpretado como HTML sem tags de bloco. Comprovado ao vivo na Demanda 14064: uma gravação
+    de teste sem essa propriedade achatou um texto de 3 linhas em uma linha só."""
+    capturado: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        capturado["corpo"] = json.loads(request.read())
+        return httpx.Response(200, json={"id": 5})
+
+    with _cliente(httpx.MockTransport(handler)) as cliente:
+        cliente.gravar_campo(5, "Custom.DemandaSpecTecnica", "linha um\n\nlinha dois")
+
+    corpo = capturado["corpo"]
+    assert corpo == [
+        {
+            "op": "replace",
+            "path": "/fields/Custom.DemandaSpecTecnica",
+            "value": "linha um\n\nlinha dois",
+        },
+        {
+            "op": "add",
+            "path": "/multilineFieldsFormat/Custom.DemandaSpecTecnica",
+            "value": "Markdown",
+        },
+    ]
+
+
 def test_gravar_campo_nao_retenta_em_falha_transitoria() -> None:
     """Escritas (gravar_campo) nunca devem retentar automaticamente.
 

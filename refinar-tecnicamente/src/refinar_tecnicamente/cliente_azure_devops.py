@@ -90,7 +90,15 @@ class ClienteAzureDevOps:
         return ids
 
     def gravar_campo(self, work_item_id: int, campo: str, valor: str) -> None:
-        """Grava um único campo por PATCH, usando JSON Patch (`replace`).
+        """Grava um único campo por PATCH, usando JSON Patch (`replace`), declarando o valor
+        como Markdown.
+
+        O Azure DevOps decide o formato (HTML ou Markdown) de um campo multilinha por
+        gravação, via a propriedade separada `multilineFieldsFormat` do JSON Patch — não pelo
+        conteúdo em si. Sem essa segunda operação, o padrão é HTML (documentado em
+        https://devblogs.microsoft.com/devops/markdown-support-arrives-for-work-items/), e um
+        valor Markdown puro sem tags, interpretado como HTML, tem toda quebra de linha
+        colapsada. Por isso as duas operações vão sempre juntas.
 
         Usa uma única tentativa sem retry automático: se o Azure DevOps retorna um código
         retentável (500/502/503) depois de já ter aplicado o PATCH, não se sabe se a escrita
@@ -101,7 +109,10 @@ class ClienteAzureDevOps:
             f"https://dev.azure.com/{self._organizacao}/{self._projeto}"
             f"/_apis/wit/workitems/{work_item_id}?api-version={_VERSAO_API}"
         )
-        payload = [{"op": "replace", "path": f"/fields/{campo}", "value": valor}]
+        payload = [
+            {"op": "replace", "path": f"/fields/{campo}", "value": valor},
+            {"op": "add", "path": f"/multilineFieldsFormat/{campo}", "value": "Markdown"},
+        ]
         resposta = self._executar(
             "PATCH",
             url,
