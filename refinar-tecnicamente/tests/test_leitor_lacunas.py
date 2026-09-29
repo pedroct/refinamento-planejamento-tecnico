@@ -175,3 +175,35 @@ def test_perfil_da_lacuna_repositorio_com_mobile_como_substring() -> None:
     como mobile. Este teste fixa o comportamento documentado, não uma falha a corrigir aqui."""
     lacuna = _lacuna("Pergunta qualquer. Ver `algo-mobile-legado/arquivo.py:1`.")
     assert perfil_da_lacuna(lacuna) == "mobile"
+
+
+_SPEC_MISTA = """# Spec
+
+## Lacunas e perguntas abertas
+
+- **N1 · Negócio** — Pergunta de negócio, nunca deve aparecer em nenhum filtro por perfil.
+- **T1 · Técnico** — Endpoint novo? Ver `diligencia-api/Servico.java:10`.
+- **T2 · Técnico** — Tela nova? Ver `diligencia-mobile/lib/x.dart:5`.
+- **T3 · Técnico** — Pergunta conceitual, sem caminho nenhum citado.
+"""
+
+
+def test_filtrar_tecnicas_por_perfil_fullstack() -> None:
+    lacunas = ler_lacunas(_SPEC_MISTA)
+    tecnicas = filtrar_tecnicas(lacunas, perfil="fullstack")
+    assert [lacuna.id for lacuna in tecnicas] == ["T1", "T3"]
+
+
+def test_filtrar_tecnicas_por_perfil_mobile() -> None:
+    lacunas = ler_lacunas(_SPEC_MISTA)
+    tecnicas = filtrar_tecnicas(lacunas, perfil="mobile")
+    assert [lacuna.id for lacuna in tecnicas] == ["T2", "T3"]
+
+
+def test_filtrar_tecnicas_sem_perfil_preserva_comportamento_atual() -> None:
+    """Regressão: omitir `perfil` (ou passar None) devolve exatamente o que `filtrar_tecnicas`
+    já devolvia antes desta task — todas as lacunas Técnico e sem rótulo, sem filtro nenhum por
+    repositório."""
+    lacunas = ler_lacunas(_SPEC_MISTA)
+    assert [lacuna.id for lacuna in filtrar_tecnicas(lacunas)] == ["T1", "T2", "T3"]
+    assert [lacuna.id for lacuna in filtrar_tecnicas(lacunas, perfil=None)] == ["T1", "T2", "T3"]

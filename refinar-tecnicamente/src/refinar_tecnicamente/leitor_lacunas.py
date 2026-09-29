@@ -131,6 +131,11 @@ def ler_lacunas(spec_md: str) -> list[Lacuna]:
     return lacunas
 
 
-def filtrar_tecnicas(lacunas: list[Lacuna]) -> list[Lacuna]:
-    """Devolve as lacunas `Técnico` e as sem rótulo, preservando a ordem original."""
-    return [lacuna for lacuna in lacunas if lacuna.audiencia in (None, "Técnico")]
+def filtrar_tecnicas(lacunas: list[Lacuna], perfil: Perfil | None = None) -> list[Lacuna]:
+    """Devolve as lacunas Técnico e as sem rótulo, preservando a ordem original. Quando `perfil`
+    é informado, descarta também as que `perfil_da_lacuna` classifica para o outro perfil —
+    lacunas 'ambos' sempre passam, em qualquer perfil."""
+    tecnicas = [lacuna for lacuna in lacunas if lacuna.audiencia in (None, "Técnico")]
+    if perfil is None:
+        return tecnicas
+    return [lacuna for lacuna in tecnicas if perfil_da_lacuna(lacuna) in (perfil, "ambos")]
