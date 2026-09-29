@@ -10,6 +10,32 @@ from markdown_it import MarkdownIt
 
 _TAGS_SEM_FECHAMENTO = frozenset({"br", "hr", "img", "input", "meta", "col", "wbr"})
 
+# Tags que o Azure DevOps suporta em campos de rich text, conforme
+# docs/documentacao_markdown_azure.md (seções Headers, Paragraphs, Block quotes,
+# Horizontal rules, Emphasis, Code highlighting, Lists, Links, Images).
+_TAGS_HTML_PERMITIDAS = frozenset(
+    {
+        "p",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "ul",
+        "ol",
+        "li",
+        "blockquote",
+        "hr",
+        "em",
+        "strong",
+        "code",
+        "pre",
+        "a",
+        "img",
+    }
+)
+
 
 class _ClienteEscrita(Protocol):
     def gravar_campo(self, work_item_id: int, campo: str, valor: str) -> None: ...
@@ -68,17 +94,37 @@ class _ValidadorDeAninhamento(HTMLParser):
             raise ErroHtmlInvalido(f"Tags não fechadas: {', '.join(self._pilha)}.")
 
 
+class _ValidadorDeTagsPermitidas(HTMLParser):
+    """Levanta erro na primeira tag de abertura que não está na whitelist suportada."""
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self._verificar(tag)
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self._verificar(tag)
+
+    def _verificar(self, tag: str) -> None:
+        if tag not in _TAGS_HTML_PERMITIDAS:
+            raise ErroHtmlInvalido(
+                f"Tag <{tag}> não está entre as tags HTML suportadas pelo Azure DevOps "
+                "(consulte docs/documentacao_markdown_azure.md)."
+            )
+
+
 def _renderizar_markdown(spec_md: str) -> str:
     html: str = MarkdownIt("commonmark").render(spec_md)
     return html
 
 
 def converter_para_html(spec_md: str) -> str:
-    """Converte Markdown para HTML e recusa gravar se o resultado não estiver bem formado."""
+    """Converte Markdown para HTML e recusa gravar se o resultado não estiver bem formado
+    ou usar uma tag fora da whitelist suportada pelo Azure DevOps."""
     html = _renderizar_markdown(spec_md)
     validador = _ValidadorDeAninhamento()
     validador.feed(html)
     validador.verificar_tudo_fechado()
+    validador_tags = _ValidadorDeTagsPermitidas()
+    validador_tags.feed(html)
     return html
 
 
