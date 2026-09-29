@@ -145,3 +145,71 @@ def test_gravar_spec_tecnica_com_arquivo_inexistente_devolve_codigo_de_erro(
     saida = capsys.readouterr().out  # type: ignore[attr-defined]
     assert codigo != 0
     assert "/caminho/que/nao/existe.md" in saida
+
+
+def test_gravar_spec_tecnica_com_backlog_anexa_backlog_md(
+    tmp_path: Path, capsys: object
+) -> None:
+    from refinar_tecnicamente.cliente_azure_devops import ClienteAzureDevOps
+
+    spec = tmp_path / "spec.md"
+    spec.write_text("# Spec\n", encoding="utf-8")
+    backlog = tmp_path / "backlog.md"
+    backlog.write_text("# Backlog\n", encoding="utf-8")
+
+    anexados: list[tuple[int, str, bytes]] = []
+    original = ClienteAzureDevOps.anexar_arquivo
+
+    def _anexar_espiao(self, work_item_id, nome_arquivo, conteudo):  # type: ignore[no-untyped-def]
+        anexados.append((work_item_id, nome_arquivo, conteudo))
+
+    import pytest as _pytest
+
+    monkeypatch = _pytest.MonkeyPatch()
+    monkeypatch.setattr(ClienteAzureDevOps, "anexar_arquivo", _anexar_espiao)
+    monkeypatch.setattr(ClienteAzureDevOps, "gravar_campo", lambda *_a, **_kw: None)
+    try:
+        codigo = executar(
+            [
+                "gravar-spec-tecnica",
+                "--demanda",
+                "13959",
+                "--spec",
+                str(spec),
+                "--backlog",
+                str(backlog),
+            ],
+            env=_ENV,
+            entrada=lambda _prompt: "AUTORIZAR GRAVAÇÃO SPEC TÉCNICA #13959",
+        )
+    finally:
+        monkeypatch.undo()
+    assert codigo == 0
+    assert (13959, "backlog.md", b"# Backlog\n") in anexados
+
+
+def test_gravar_spec_tecnica_com_backlog_inexistente_devolve_codigo_de_erro(
+    tmp_path: Path, capsys: object
+) -> None:
+    spec = tmp_path / "spec.md"
+    spec.write_text("# Spec\n", encoding="utf-8")
+
+    def _entrada_nao_deveria_ser_chamada(_prompt: str) -> str:
+        raise AssertionError("entrada() não deveria ser chamada quando o backlog não existe")
+
+    codigo = executar(
+        [
+            "gravar-spec-tecnica",
+            "--demanda",
+            "13959",
+            "--spec",
+            str(spec),
+            "--backlog",
+            "/caminho/que/nao/existe.md",
+        ],
+        env=_ENV,
+        entrada=_entrada_nao_deveria_ser_chamada,
+    )
+    saida = capsys.readouterr().out  # type: ignore[attr-defined]
+    assert codigo != 0
+    assert "/caminho/que/nao/existe.md" in saida

@@ -67,6 +67,7 @@ def _construir_parser() -> argparse.ArgumentParser:
     gravar = subs.add_parser("gravar-spec-tecnica")
     gravar.add_argument("--demanda", type=int, required=True)
     gravar.add_argument("--spec", required=True)
+    gravar.add_argument("--backlog", default=None)
     gravar.add_argument(
         "--campo",
         default=None,
@@ -108,6 +109,13 @@ def _gravar_spec_tecnica(
     if not caminho_spec.is_file():
         print(f"Spec não encontrada: {args.spec}")
         return 1
+    backlog_md: str | None = None
+    if args.backlog is not None:
+        caminho_backlog = Path(args.backlog)
+        if not caminho_backlog.is_file():
+            print(f"Backlog não encontrado: {args.backlog}")
+            return 1
+        backlog_md = caminho_backlog.read_text(encoding="utf-8")
     spec_md = caminho_spec.read_text(encoding="utf-8")
     try:
         html = converter_para_html(spec_md)
@@ -131,6 +139,7 @@ def _gravar_spec_tecnica(
                 spec_md=spec_md,
                 resposta_confirmacao=resposta,
                 html=html,
+                backlog_md=backlog_md,
             )
     except ErroConfirmacaoInvalida as erro:
         print(str(erro))
