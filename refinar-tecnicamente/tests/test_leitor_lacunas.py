@@ -231,3 +231,42 @@ def test_perfil_da_lacuna_evidencia_texto_com_pergunta_caminho_mobile() -> None:
         evidencia="Sem referência no repositório",
     )
     assert perfil_da_lacuna(lacuna) == "mobile"
+
+
+def test_perfil_da_lacuna_multiplos_caminhos_sem_crases_mistos_fullstack_primeiro() -> None:
+    """Múltiplos caminhos separados por vírgula, com mistura (fullstack e mobile) => 'ambos'.
+    Testa ordem: fullstack primeiro."""
+    lacuna = _lacuna(
+        "Pergunta.",
+        evidencia="diligencia-api/Servico.java:1, diligencia-mobile/lib/x.dart:2",
+    )
+    assert perfil_da_lacuna(lacuna) == "ambos"
+
+
+def test_perfil_da_lacuna_multiplos_caminhos_sem_crases_mistos_mobile_primeiro() -> None:
+    """Múltiplos caminhos separados por vírgula, com mistura (mobile e fullstack) => 'ambos'.
+    Testa ordem: mobile primeiro."""
+    lacuna = _lacuna(
+        "Pergunta.",
+        evidencia="diligencia-mobile/lib/x.dart:2, diligencia-api/Servico.java:1",
+    )
+    assert perfil_da_lacuna(lacuna) == "ambos"
+
+
+def test_perfil_da_lacuna_multiplos_caminhos_sem_crases_mesmo_perfil() -> None:
+    """Múltiplos caminhos sem crases, todos do mesmo perfil (mobile) => 'mobile'."""
+    lacuna = _lacuna(
+        "Pergunta.",
+        evidencia="diligencia-mobile/lib/x.dart:1, diligencia-mobile/lib/y.dart:2",
+    )
+    assert perfil_da_lacuna(lacuna) == "mobile"
+
+
+def test_perfil_da_lacuna_evidencia_na_ou_eou_sem_caminho() -> None:
+    """Palavras-chave 'n/a' e 'e/ou' que casam \\S+/\\S+ mas não são caminhos
+    devem ser ignoradas => 'ambos'."""
+    lacuna1 = _lacuna("Pergunta.", evidencia="n/a")
+    assert perfil_da_lacuna(lacuna1) == "ambos"
+
+    lacuna2 = _lacuna("Pergunta.", evidencia="e/ou")
+    assert perfil_da_lacuna(lacuna2) == "ambos"

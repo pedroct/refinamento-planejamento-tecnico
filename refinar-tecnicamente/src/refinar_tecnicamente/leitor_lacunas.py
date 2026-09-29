@@ -43,6 +43,24 @@ def _parece_caminho(texto: str) -> bool:
     return re.match(r"\S+/\S+", texto) is not None
 
 
+def _tokens_com_forma_caminho(texto: str) -> list[str]:
+    """Extrai tokens que parecem caminhos (padrão repo/arquivo[:linha]) de uma string
+    com múltiplos tokens separados por espaço, vírgula ou ponto-e-vírgula.
+    Exclui palavras-chave 'n/a' e 'e/ou' que casam \\S+/\\S+ mas não são caminhos."""
+    if not texto:
+        return []
+    # Split por separadores: espaço, vírgula, ponto-e-vírgula
+    tokens = re.split(r"[\s,;]+", texto.strip())
+    caminhos = []
+    for token in tokens:
+        # Remove pontuação final (.,;:!?)")
+        token = token.rstrip(".,;:!?)")
+        # Verifica se parece um caminho e não é um caso especial
+        if _parece_caminho(token) and token.lower() not in ("n/a", "e/ou"):
+            caminhos.append(token)
+    return caminhos
+
+
 def _e_caminho_mobile(caminho: str) -> bool:
     """O primeiro segmento do caminho (antes de '/') é o nome do repositório; 'mobile' como
     substring nele, case-insensitive, é a convenção observada nos repositórios reais
@@ -54,21 +72,18 @@ def _e_caminho_mobile(caminho: str) -> bool:
 
 def perfil_da_lacuna(lacuna: Lacuna) -> Perfil:
     """Classifica pelos caminhos citados entre crases na pergunta e na evidência, juntos.
-    A evidência sem crases é interpretada como caminho direto apenas se parecer um caminho
-    (padrão \\S+/\\S+); texto livre sem "/" (ex.: "Nenhuma referência") não contribui.
+    A evidência sem crases é interpretada como múltiplos tokens de caminho (padrão \\S+/\\S+),
+    separados por espaço/vírgula/ponto-e-vírgula, excluindo 'n/a' e 'e/ou'.
+    Texto livre sem "/" (ex.: "Nenhuma referência") não contribui.
     Sem caminho nenhum, ou caminhos dos dois tipos ao mesmo tempo (mesmo campo ou campos
     diferentes), o resultado é 'ambos' — nunca esconde uma pergunta por excesso de precisão."""
     texto = lacuna.pergunta + " " + (lacuna.evidencia or "")
     caminhos = _CAMINHO_ENTRE_CRASES.findall(texto)
 
-    # Se a evidência não estiver vazia, não tiver caminhos entre crases e parecer um caminho,
-    # interpretá-la como um caminho direto
-    if (
-        lacuna.evidencia
-        and not _CAMINHO_ENTRE_CRASES.search(lacuna.evidencia)
-        and _parece_caminho(lacuna.evidencia)
-    ):
-        caminhos.append(lacuna.evidencia)
+    # Se a evidência não estiver vazia, não tiver caminhos entre crases,
+    # extrair tokens que pareçam caminhos
+    if lacuna.evidencia and not _CAMINHO_ENTRE_CRASES.search(lacuna.evidencia):
+        caminhos.extend(_tokens_com_forma_caminho(lacuna.evidencia))
 
     if not caminhos:
         return "ambos"
