@@ -1,3 +1,4 @@
+import argparse
 from typing import Any
 
 import httpx
@@ -162,3 +163,51 @@ def test_montar_com_hierarquia_incompleta_devolve_mensagem_limpa(
     saida = capsys.readouterr().out
     assert codigo == 1
     assert "Traceback" not in saida
+
+
+def test_montar_com_falha_ao_falar_com_azure_boards_devolve_mensagem_limpa(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`args.comando` só admite "montar" hoje (único subparser registrado), então o único jeito
+    real de exercitar o `except (ErroDestinoInvalido, ...)` é fazer o cliente HTTP (real, via
+    MockTransport) devolver um 404 ao ler o work item inicial."""
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, json={})
+
+    def fabrica(organizacao: str, projeto: str, token: str) -> ClienteAzureDevOps:
+        return ClienteAzureDevOps(
+            organizacao, projeto, token, transport=httpx.MockTransport(handler)
+        )
+
+    monkeypatch.setattr(cli, "ClienteAzureDevOps", fabrica)
+
+    codigo = executar(["montar", str(_ID_HISTORIA)], env=_ENV)
+
+    saida = capsys.readouterr().out
+    assert codigo == 1
+    assert "Falha ao falar com o Azure Boards" in saida
+    assert "Traceback" not in saida
+
+
+def test_montar_com_comando_desconhecido_devolve_codigo_2(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`_construir_parser` só registra o subcomando "montar", então `argparse` nunca deixa
+    `args.comando` chegar a `executar` com outro valor — o `if args.comando != "montar"` é uma
+    salvaguarda defensiva. Para cobri-la sem tocar em `src/`, trocamos o parser por um dublê que
+    devolve um `Namespace` com outro comando e um `.error()` que não interrompe a execução (ao
+    contrário do `argparse` real, que já sairia com `SystemExit` antes desta checagem)."""
+
+    class _ParserFalso:
+        def parse_args(self, _argv: list[str]) -> argparse.Namespace:
+            return argparse.Namespace(comando="outro")
+
+        def error(self, _mensagem: str) -> None:
+            return None
+
+    monkeypatch.setattr(cli, "_construir_parser", lambda: _ParserFalso())
+
+    codigo = executar(["outro"], env=_ENV)
+
+    assert codigo == 2
