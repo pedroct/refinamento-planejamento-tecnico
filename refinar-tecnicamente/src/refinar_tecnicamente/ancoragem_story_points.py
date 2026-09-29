@@ -38,7 +38,7 @@ def sugerir_story_points(
     tipos_wiql = ", ".join(f"'{tipo}'" for tipo in tipos)
     estados_wiql = ", ".join(f"'{estado}'" for estado in _ESTADOS_FECHADOS)
     wiql = (
-        "SELECT [System.Id] FROM WorkItems "
+        "SELECT [System.Id] FROM WorkItems "  # noqa: S608
         f"WHERE [System.TeamProject] = '{projeto}' "
         f"AND [System.AreaPath] UNDER '{area_path}' "
         f"AND [System.WorkItemType] IN ({tipos_wiql}) "

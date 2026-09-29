@@ -69,7 +69,8 @@ class _ValidadorDeAninhamento(HTMLParser):
 
 
 def _renderizar_markdown(spec_md: str) -> str:
-    return MarkdownIt("commonmark").render(spec_md)
+    html: str = MarkdownIt("commonmark").render(spec_md)
+    return html
 
 
 def converter_para_html(spec_md: str) -> str:
@@ -105,7 +106,8 @@ def gravar_spec_tecnica(
     frase_esperada = montar_frase_autorizacao(id_demanda)
     if resposta_confirmacao.strip() != frase_esperada:
         raise ErroConfirmacaoInvalida(
-            "Confirmação ausente, incorreta ou vinculada a outra Demanda; nenhuma gravação foi feita."
+            "Confirmação ausente, incorreta ou vinculada a outra Demanda; "
+            "nenhuma gravação foi feita."
         )
     html_final = html if html is not None else converter_para_html(spec_md)
     cliente.gravar_campo(id_demanda, campo, html_final)

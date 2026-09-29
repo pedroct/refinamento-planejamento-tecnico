@@ -93,7 +93,12 @@ def test_ignora_item_com_story_points_nao_numerico() -> None:
     # item 3 tem Story Points válido (7.0). Mediana deve ser calculada apenas dos 2 válidos.
     itens = {
         1: _item(3.0),
-        2: {"fields": {"System.Title": "Item com SP inválido", "Microsoft.VSTS.Scheduling.StoryPoints": "grande"}},
+        2: {
+            "fields": {
+                "System.Title": "Item com SP inválido",
+                "Microsoft.VSTS.Scheduling.StoryPoints": "grande",
+            }
+        },
         3: _item(7.0),
     }
     cliente = ClienteFalso([1, 2, 3], itens)

@@ -101,4 +101,4 @@ def ler_lacunas(spec_md: str) -> list[Lacuna]:
 
 def filtrar_tecnicas(lacunas: list[Lacuna]) -> list[Lacuna]:
     """Devolve as lacunas `Técnico` e as sem rótulo, preservando a ordem original."""
-    return [l for l in lacunas if l.audiencia in (None, "Técnico")]
+    return [lacuna for lacuna in lacunas if lacuna.audiencia in (None, "Técnico")]

@@ -78,7 +78,7 @@ def test_secao_seguida_de_outra_secao_para_no_limite() -> None:
 def test_filtrar_tecnicas_exclui_negocio_rotulado() -> None:
     lacunas = ler_lacunas(SPEC_COM_ROTULOS)
     tecnicas = filtrar_tecnicas(lacunas)
-    assert [l.id for l in tecnicas] == ["T2", "T5"]
+    assert [lacuna.id for lacuna in tecnicas] == ["T2", "T5"]
 
 
 def test_filtrar_tecnicas_inclui_sem_rotulo() -> None:

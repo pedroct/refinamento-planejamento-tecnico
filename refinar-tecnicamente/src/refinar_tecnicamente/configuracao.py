@@ -43,7 +43,7 @@ def carregar_configuracao(env: Mapping[str, str]) -> ConfiguracaoRefinamento:
         return ConfiguracaoRefinamento(
             organizacao=env.get("AZURE_DEVOPS_ORGANIZACAO", ""),
             projeto=env.get("AZURE_DEVOPS_PROJETO", ""),
-            token=env.get("AZURE_DEVOPS_TOKEN", ""),
+            token=SecretStr(env.get("AZURE_DEVOPS_TOKEN", "")),
             campo_spec_tecnica=env.get(
                 "AZURE_DEVOPS_CAMPO_SPEC_TECNICA", "Custom.DemandaSpecTecnica"
             ),

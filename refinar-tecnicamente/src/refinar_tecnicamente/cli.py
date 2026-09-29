@@ -99,7 +99,11 @@ def _ler_lacunas(caminho_spec: str) -> int:
         print(f"Spec não encontrada: {caminho_spec}")
         return 1
     lacunas = filtrar_tecnicas(ler_lacunas(caminho.read_text(encoding="utf-8")))
-    print(json.dumps([dataclasses.asdict(l) for l in lacunas], ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            [dataclasses.asdict(lacuna) for lacuna in lacunas], ensure_ascii=False, indent=2
+        )
+    )
     return 0
 
 

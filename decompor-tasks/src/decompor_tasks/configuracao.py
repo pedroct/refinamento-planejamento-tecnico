@@ -43,7 +43,7 @@ def carregar_configuracao(env: Mapping[str, str]) -> ConfiguracaoDecomposicao:
         return ConfiguracaoDecomposicao(
             organizacao=env.get("AZURE_DEVOPS_ORGANIZACAO", ""),
             projeto=env.get("AZURE_DEVOPS_PROJETO", ""),
-            token=env.get("AZURE_DEVOPS_TOKEN", ""),
+            token=SecretStr(env.get("AZURE_DEVOPS_TOKEN", "")),
             tipo_task=env.get("AZURE_DEVOPS_TIPO_TASK", "Task"),
         )
     except ValidationError as erro:
