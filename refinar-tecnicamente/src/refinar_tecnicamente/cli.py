@@ -34,6 +34,7 @@ from refinar_tecnicamente.resolver_spec import (
     ErroPastaAmbigua,
     ErroSpecNaoEncontrada,
     resolver_spec,
+    resolver_spec_remoto,
 )
 
 
@@ -93,6 +94,11 @@ def _construir_parser() -> argparse.ArgumentParser:
     resolver = subs.add_parser("resolver-spec")
     resolver.add_argument("--demanda", type=int, required=True)
     resolver.add_argument("--raiz", required=True)
+    resolver.add_argument(
+        "--forcar-remoto",
+        action="store_true",
+        help="Baixa o anexo mais recente para uma pasta irmã `.remoto`, sem tocar na local.",
+    )
 
     return parser
 
@@ -176,6 +182,7 @@ def _resolver_spec(args: argparse.Namespace, env: Mapping[str, str]) -> int:
     with ClienteAzureDevOps(
         config.organizacao, config.projeto, config.token.get_secret_value()
     ) as cliente:
-        caminho = resolver_spec(cliente, raiz=raiz, id_demanda=args.demanda)
+        resolver = resolver_spec_remoto if args.forcar_remoto else resolver_spec
+        caminho = resolver(cliente, raiz=raiz, id_demanda=args.demanda)
     print(str(caminho.resolve()))
     return 0

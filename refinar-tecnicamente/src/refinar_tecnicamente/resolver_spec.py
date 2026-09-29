@@ -9,6 +9,8 @@ import unicodedata
 from pathlib import Path
 from typing import Any, Protocol
 
+_SUFIXO_REMOTO = ".remoto"
+
 
 class _ClienteLeitura(Protocol):
     def baixar_anexo(self, work_item_id: int, nome_arquivo: str) -> bytes | None: ...
@@ -35,7 +37,8 @@ def montar_nome_pasta(id_demanda: int, titulo: str) -> str:
 
 
 def localizar_pasta_local(raiz: Path, id_demanda: int) -> Path | None:
-    """Procura `docs/specs/DN-<id>-*/` (ou `DN-<id>/`) sob `raiz`.
+    """Procura `docs/specs/DN-<id>-*/` (ou `DN-<id>/`) sob `raiz`, ignorando as pastas
+    `.remoto` de `resolver_spec_remoto`.
 
     Devolve `None` quando `docs/specs/` não existe ou nenhuma pasta corresponde — nunca
     levanta erro de arquivo/diretório inexistente, isso é uma ausência normal, não uma falha.
@@ -44,7 +47,11 @@ def localizar_pasta_local(raiz: Path, id_demanda: int) -> Path | None:
     if not base.is_dir():
         return None
     candidatos = sorted(
-        {p for p in base.glob(f"DN-{id_demanda}-*") if p.is_dir()}
+        {
+            p
+            for p in base.glob(f"DN-{id_demanda}-*")
+            if p.is_dir() and not p.name.endswith(_SUFIXO_REMOTO)
+        }
         | {p for p in base.glob(f"DN-{id_demanda}") if p.is_dir()}
     )
     if not candidatos:
@@ -68,11 +75,28 @@ def resolver_spec(cliente: _ClienteLeitura, *, raiz: Path, id_demanda: int) -> P
     pasta_local = localizar_pasta_local(raiz, id_demanda)
     if pasta_local is not None:
         return pasta_local
+    return _baixar_e_materializar(cliente, raiz=raiz, id_demanda=id_demanda, sufixo="")
+
+
+def resolver_spec_remoto(cliente: _ClienteLeitura, *, raiz: Path, id_demanda: int) -> Path:
+    """Baixa o anexo mais recente da Demanda para uma pasta IRMÃ da local
+    (`docs/specs/DN-<id>-<slug>.remoto/`), ignorando a pasta local existente. Serve para ler o
+    que outra sessão (outro perfil) publicou sem sobrescrever o trabalho local. A pasta remota
+    é regravada a cada chamada; a local nunca é tocada."""
+    return _baixar_e_materializar(cliente, raiz=raiz, id_demanda=id_demanda, sufixo=_SUFIXO_REMOTO)
+
+
+def _baixar_e_materializar(
+    cliente: _ClienteLeitura, *, raiz: Path, id_demanda: int, sufixo: str
+) -> Path:
     spec_bytes = cliente.baixar_anexo(id_demanda, "spec.md")
     if spec_bytes is None:
         raise ErroSpecNaoEncontrada(
             f"Demanda {id_demanda}: nenhuma pasta local em {raiz / 'docs' / 'specs'} e "
             "nenhum anexo spec.md nessa Demanda. A spec ainda não foi publicada."
+            if not sufixo
+            else f"Demanda {id_demanda}: nenhum anexo spec.md nessa Demanda no Azure Boards. "
+            "Não há versão remota para comparar."
         )
     # backlog.md é opcional, mas se o download dele falhar (exceção do cliente), nada pode
     # já ter sido gravado em disco — senão a próxima execução acharia uma pasta local
@@ -84,9 +108,12 @@ def resolver_spec(cliente: _ClienteLeitura, *, raiz: Path, id_demanda: int) -> P
     campos = work_item.get("fields")
     titulo = campos.get("System.Title", "") if isinstance(campos, dict) else ""
     nome_pasta = montar_nome_pasta(id_demanda, titulo if isinstance(titulo, str) else "")
-    destino = raiz / "docs" / "specs" / nome_pasta
+    destino = raiz / "docs" / "specs" / f"{nome_pasta}{sufixo}"
     destino.mkdir(parents=True, exist_ok=True)
     (destino / "spec.md").write_bytes(spec_bytes)
     if backlog_bytes is not None:
         (destino / "backlog.md").write_bytes(backlog_bytes)
+    else:
+        # Uma pasta `.remoto` reaproveitada não pode manter o backlog de um download anterior.
+        (destino / "backlog.md").unlink(missing_ok=True)
     return destino

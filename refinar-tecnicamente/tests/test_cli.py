@@ -420,6 +420,54 @@ def test_resolver_spec_sem_pasta_local_e_sem_anexo_devolve_codigo_de_erro(
     assert "13959" in saida
 
 
+def test_resolver_spec_forcar_remoto_baixa_para_pasta_irma(
+    tmp_path: Path, capsys: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from refinar_tecnicamente.cliente_azure_devops import ClienteAzureDevOps
+
+    local = tmp_path / "docs" / "specs" / "DN-13959-emissao-de-convites"
+    local.mkdir(parents=True)
+    (local / "spec.md").write_text("# Local\n", encoding="utf-8")
+    monkeypatch.setattr(
+        ClienteAzureDevOps,
+        "baixar_anexo",
+        lambda _self, _id, nome: b"# Remoto\n" if nome == "spec.md" else None,
+    )
+    monkeypatch.setattr(
+        ClienteAzureDevOps,
+        "ler_work_item",
+        lambda _self, id_demanda: {
+            "id": id_demanda,
+            "fields": {"System.Title": "Emissao de Convites"},
+        },
+    )
+    codigo = executar(
+        ["resolver-spec", "--demanda", "13959", "--raiz", str(tmp_path), "--forcar-remoto"],
+        env=_ENV,
+    )
+    saida = capsys.readouterr().out  # type: ignore[attr-defined]
+    remoto = local.parent / "DN-13959-emissao-de-convites.remoto"
+    assert codigo == 0
+    assert str(remoto.resolve()) in saida
+    assert (remoto / "spec.md").read_text(encoding="utf-8") == "# Remoto\n"
+    assert (local / "spec.md").read_text(encoding="utf-8") == "# Local\n"
+
+
+def test_resolver_spec_forcar_remoto_sem_anexo_devolve_codigo_de_erro(
+    tmp_path: Path, capsys: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from refinar_tecnicamente.cliente_azure_devops import ClienteAzureDevOps
+
+    monkeypatch.setattr(ClienteAzureDevOps, "baixar_anexo", lambda *_a, **_kw: None)
+    codigo = executar(
+        ["resolver-spec", "--demanda", "13959", "--raiz", str(tmp_path), "--forcar-remoto"],
+        env=_ENV,
+    )
+    saida = capsys.readouterr().out  # type: ignore[attr-defined]
+    assert codigo != 0
+    assert "13959" in saida
+
+
 _SKILL_MD = Path(__file__).resolve().parents[1] / "SKILL.md"
 
 
@@ -438,3 +486,14 @@ def test_skill_md_documenta_as_duas_subsecoes_da_abordagem_tecnica() -> None:
 def test_skill_md_documenta_buscar_versao_mais_recente_antes_de_escrever() -> None:
     texto = _SKILL_MD.read_text(encoding="utf-8")
     assert "substituindo **só** a subseção do próprio perfil" in texto
+
+
+def test_skill_md_usa_forcar_remoto_para_buscar_o_outro_perfil() -> None:
+    texto = _SKILL_MD.read_text(encoding="utf-8")
+    assert "--forcar-remoto" in texto
+    assert "ainda não existir" in texto
+
+
+def test_skill_md_pergunta_perfil_antes_de_ler_as_lacunas() -> None:
+    texto = _SKILL_MD.read_text(encoding="utf-8")
+    assert "Antes de ler as lacunas, pergunte" in texto

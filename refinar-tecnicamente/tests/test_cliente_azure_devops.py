@@ -220,9 +220,7 @@ def test_anexar_arquivo_faz_upload_e_vincula_ao_work_item() -> None:
             assert "fileName=spec.md" in str(request.url)
             assert request.headers["content-type"] == "application/octet-stream"
             assert request.read() == b"# Spec\n"
-            return httpx.Response(
-                200, json={"id": "abc", "url": "https://dev.azure.com/anexo/abc"}
-            )
+            return httpx.Response(200, json={"id": "abc", "url": "https://dev.azure.com/anexo/abc"})
         assert request.method == "PATCH"
         corpo = json.loads(request.read())
         assert corpo[0]["op"] == "add"
@@ -294,9 +292,7 @@ def test_baixar_anexo_sem_nenhum_anexo_devolve_none() -> None:
 def test_baixar_anexo_com_relations_ausente_devolve_none() -> None:
     """`relations` nem sempre vem no payload (work item sem nenhuma relação) — o campo
     ausente vira `None`, que não é uma lista; não deve ser tratado como anexo encontrado."""
-    handler = httpx.MockTransport(
-        lambda _req: httpx.Response(200, json={"id": 5, "fields": {}})
-    )
+    handler = httpx.MockTransport(lambda _req: httpx.Response(200, json={"id": 5, "fields": {}}))
     with _cliente(handler) as cliente:
         assert cliente.baixar_anexo(5, "spec.md") is None
 

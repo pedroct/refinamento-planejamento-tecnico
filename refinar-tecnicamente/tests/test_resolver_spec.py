@@ -10,6 +10,7 @@ from refinar_tecnicamente.resolver_spec import (
     localizar_pasta_local,
     montar_nome_pasta,
     resolver_spec,
+    resolver_spec_remoto,
 )
 
 
@@ -132,3 +133,39 @@ def test_resolver_spec_com_falha_ao_baixar_backlog_nao_grava_nada_em_disco(
     with pytest.raises(ErroDestinoInvalido):
         resolver_spec(cliente, raiz=tmp_path, id_demanda=13959)
     assert not (tmp_path / "docs").exists()
+
+
+def test_resolver_spec_remoto_baixa_para_pasta_irma_sem_tocar_na_local(tmp_path: Path) -> None:
+    local = tmp_path / "docs" / "specs" / "DN-13959-emissao-de-convites"
+    local.mkdir(parents=True)
+    (local / "spec.md").write_text("# Local\n", encoding="utf-8")
+    cliente = ClienteFalso({"spec.md": b"# Remoto\n", "backlog.md": b"# Backlog\n"})
+    destino = resolver_spec_remoto(cliente, raiz=tmp_path, id_demanda=13959)
+    assert destino == local.parent / "DN-13959-emissao-de-convites.remoto"
+    assert (destino / "spec.md").read_bytes() == b"# Remoto\n"
+    assert (destino / "backlog.md").read_bytes() == b"# Backlog\n"
+    assert (local / "spec.md").read_text(encoding="utf-8") == "# Local\n"
+
+
+def test_resolver_spec_remoto_sem_anexo_recusa_com_mensagem_clara(tmp_path: Path) -> None:
+    with pytest.raises(ErroSpecNaoEncontrada, match="13959"):
+        resolver_spec_remoto(ClienteFalso(), raiz=tmp_path, id_demanda=13959)
+
+
+def test_resolver_spec_remoto_regrava_e_remove_backlog_obsoleto(tmp_path: Path) -> None:
+    resolver_spec_remoto(
+        ClienteFalso({"spec.md": b"# v1\n", "backlog.md": b"# b\n"}), raiz=tmp_path, id_demanda=1
+    )
+    destino = resolver_spec_remoto(
+        ClienteFalso({"spec.md": b"# v2\n"}), raiz=tmp_path, id_demanda=1
+    )
+    assert (destino / "spec.md").read_bytes() == b"# v2\n"
+    assert not (destino / "backlog.md").exists()
+
+
+def test_pasta_remoto_nao_torna_a_pasta_local_ambigua(tmp_path: Path) -> None:
+    base = tmp_path / "docs" / "specs"
+    (base / "DN-13959-x").mkdir(parents=True)
+    (base / "DN-13959-x.remoto").mkdir()
+    assert localizar_pasta_local(tmp_path, 13959) == base / "DN-13959-x"
+    assert resolver_spec(ClienteFalso(), raiz=tmp_path, id_demanda=13959) == base / "DN-13959-x"

@@ -172,18 +172,14 @@ class ClienteAzureDevOps:
         lista (`path: "/relations/-"`), então a ordem da lista já reflete a ordem de anexo.
         """
         work_item = self.ler_work_item(work_item_id)
-        url_mais_recente = self._url_do_anexo_mais_recente(
-            work_item.get("relations"), nome_arquivo
-        )
+        url_mais_recente = self._url_do_anexo_mais_recente(work_item.get("relations"), nome_arquivo)
         if url_mais_recente is None:
             return None
         resposta = self._executar("GET", url_mais_recente)
         if resposta.status_code == 404:
             raise ErroDestinoInvalido(f"Não foi possível encontrar o anexo {nome_arquivo}.")
         if resposta.status_code >= 400:
-            raise ErroDestinoInvalido(
-                f"O download do anexo devolveu HTTP {resposta.status_code}."
-            )
+            raise ErroDestinoInvalido(f"O download do anexo devolveu HTTP {resposta.status_code}.")
         return resposta.content
 
     @staticmethod
@@ -226,9 +222,7 @@ class ClienteAzureDevOps:
             return self._executar_sem_retry(metodo, url, corpo, headers)
         return self._executar_com_retry(metodo, url, corpo, headers)
 
-    def _executar_binario_sem_retry(
-        self, metodo: str, url: str, conteudo: bytes
-    ) -> httpx.Response:
+    def _executar_binario_sem_retry(self, metodo: str, url: str, conteudo: bytes) -> httpx.Response:
         """Uma única tentativa sem retry, para upload de conteúdo binário (anexos)."""
         headers = {"Content-Type": "application/octet-stream"}
         try:

@@ -21,7 +21,7 @@ Negócio via `Custom.DemandaSpecTecnica`.
    CLI recusar (nem pasta local, nem anexo), pare e informe que a Demanda ainda não tem spec
    publicada — não peça o caminho manualmente, nem sugira rodar `gerador-hu` você mesmo.
 
-   Pergunte, antes de tudo, **qual o perfil de quem está conduzindo esta sessão**: `fullstack`
+   Antes de ler as lacunas, pergunte **qual o perfil de quem está conduzindo esta sessão**: `fullstack`
    (backend + frontend web) ou `mobile`. Cada Demanda pode passar por duas sessões separadas,
    uma por perfil, conduzidas por profissionais diferentes — a resposta desta pergunta decide o
    filtro do passo 2 e a subseção do passo 3.
@@ -45,11 +45,16 @@ Negócio via `Custom.DemandaSpecTecnica`.
    <camadas tocadas, migração quando houver, estratégia de teste — só repositórios mobile>
    ```
 
-   Antes de escrever, rode `resolver-spec` de novo para buscar a versão mais recente de
-   `spec.md` — ela pode ter sido atualizada pela sessão do outro perfil, publicada em paralelo.
-   Monte o `spec.md` final substituindo **só** a subseção do próprio perfil; se a subseção do
-   outro perfil já existir no arquivo buscado, ela entra intacta, sem alteração nenhuma. Cite
-   `caminho:linha` para cada afirmação, na mesma disciplina do resto da spec.
+   Antes de escrever, busque a versão remota mais recente: `resolver-spec --demanda <id> --raiz
+   <raiz> --forcar-remoto`. Sem essa flag `resolver-spec` devolve a pasta local existente e nunca
+   baixa nada; com ela, o anexo mais recente vai para uma pasta irmã `DN-<id>-<slug>.remoto/`,
+   sem tocar na local (o caminho sai em `stdout`; sem anexo, a CLI recusa). Leia dessa cópia
+   remota a subseção do outro perfil, que a sessão dele pode ter publicado em paralelo. Monte o
+   `spec.md` final substituindo **só** a subseção do próprio perfil; a do outro perfil entra
+   intacta, sem alteração nenhuma, copiada da cópia remota. Se a subseção do outro perfil
+   ainda não existir nela (o outro perfil não publicou), mantenha o que já houver no `spec.md` local
+   para ela ou deixe-a ausente — nunca a invente. Cite `caminho:linha` para cada afirmação, na
+   mesma disciplina do resto da spec.
 4. Para cada História/Bug do `backlog.md` associado, rode `sugerir-story-points --area-path <Area
    Path da Demanda> --tipo "User Story" --tipo Bug`. Quando a sugestão vier com `pontos: null`, não
    prossiga sozinho — pergunte a pontuação a quem está na reunião e registre a resposta no backlog;
