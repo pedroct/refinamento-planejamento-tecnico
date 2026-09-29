@@ -90,11 +90,20 @@ def test_gravar_spec_tecnica_mostra_o_html_antes_da_frase_de_confirmacao(
 
 
 def test_gravar_spec_tecnica_com_html_invalido_recusa_sem_pedir_confirmacao(
-    tmp_path: Path, capsys: object
+    tmp_path: Path, capsys: object, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """O renderizador usa `html: False`, então HTML cru digitado na spec é escapado e não
+    produz mais uma tag real inválida — simula a saída hostil do renderizador via
+    monkeypatch para continuar provando que a CLI recusa gravar sem pedir confirmação."""
+    import refinar_tecnicamente.gravar_spec_tecnica as gravar_spec_tecnica_modulo
+
     spec = tmp_path / "spec.md"
-    # Markdown cujo HTML renderizado tem uma tag não fechada, via HTML embutido cru.
-    spec.write_text("<div><span>sem fechar\n", encoding="utf-8")
+    spec.write_text("qualquer coisa\n", encoding="utf-8")
+    monkeypatch.setattr(
+        gravar_spec_tecnica_modulo,
+        "_renderizar_markdown",
+        lambda _spec_md: "<div><span>sem fechar",
+    )
 
     def _entrada_nao_deveria_ser_chamada(_prompt: str) -> str:
         raise AssertionError("entrada() não deveria ser chamada quando o HTML é inválido")

@@ -33,6 +33,7 @@ _TAGS_HTML_PERMITIDAS = frozenset(
         "pre",
         "a",
         "img",
+        "br",
     }
 )
 
@@ -47,7 +48,8 @@ class ErroConfirmacaoInvalida(ValueError):
 
 
 class ErroHtmlInvalido(ValueError):
-    """O HTML gerado a partir da spec não está bem formado; a gravação é recusada."""
+    """O HTML gerado a partir da spec não está bem formado, ou usa uma tag fora da whitelist
+    suportada pelo Azure DevOps; a gravação é recusada."""
 
 
 class ErroAnexoAposCampoGravado(RuntimeError):
@@ -112,7 +114,11 @@ class _ValidadorDeTagsPermitidas(HTMLParser):
 
 
 def _renderizar_markdown(spec_md: str) -> str:
-    html: str = MarkdownIt("commonmark").render(spec_md)
+    # html: False escapa qualquer HTML bruto digitado na spec (vira texto literal, nunca uma
+    # tag real) — sem isso, truques como `<!--><script>...</script>-->` (comentário/CDATA que
+    # o HTMLParser consome inteiro, sem nunca chamar handle_starttag) driblariam os dois
+    # validadores abaixo e um <script> chegaria ao campo gravado no Azure Boards.
+    html: str = MarkdownIt("commonmark", {"html": False}).render(spec_md)
     return html
 
 
@@ -122,9 +128,11 @@ def converter_para_html(spec_md: str) -> str:
     html = _renderizar_markdown(spec_md)
     validador = _ValidadorDeAninhamento()
     validador.feed(html)
+    validador.close()
     validador.verificar_tudo_fechado()
     validador_tags = _ValidadorDeTagsPermitidas()
     validador_tags.feed(html)
+    validador_tags.close()
     return html
 
 
