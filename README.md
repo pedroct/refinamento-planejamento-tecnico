@@ -119,12 +119,21 @@ As skills seguem o formato aberto (`SKILL.md` por pasta) suportado pelo [`npx sk
 # listar as skills disponíveis
 npx skills add pedroct/refinamento-planejamento-tecnico --list
 
-# instalar todas, no projeto atual, para Claude Code
-npx skills add pedroct/refinamento-planejamento-tecnico --all -a claude-code
+# instalar todas, no projeto atual, para Claude Code, Cursor e Codex — os agentes que o time usa
+npx skills add pedroct/refinamento-planejamento-tecnico --all -a claude-code -a cursor -a codex
 
-# instalar só uma
+# instalar só num agente
+npx skills add pedroct/refinamento-planejamento-tecnico --all -a claude-code
+npx skills add pedroct/refinamento-planejamento-tecnico --all -a cursor
+npx skills add pedroct/refinamento-planejamento-tecnico --all -a codex
+
+# instalar só uma skill, num agente
 npx skills add pedroct/refinamento-planejamento-tecnico --skill decompor-tasks -a claude-code
 ```
+
+Sem `-a`, o comando pergunta interativamente qual(is) agente(s) instalados na máquina você quer usar —
+útil quando você tem mais de um dos três configurados e quer escolher na hora, em vez de fixar no
+comando.
 
 A instalação pode ser por projeto (padrão) ou global:
 
@@ -134,8 +143,8 @@ A instalação pode ser por projeto (padrão) ou global:
 | Global | `-g` | `~/<agente>/skills/` — disponível em qualquer projeto da máquina |
 
 ```bash
-# instalar globalmente, disponível em todos os projetos
-npx skills add pedroct/refinamento-planejamento-tecnico --all -a claude-code -g
+# instalar globalmente, disponível em todos os projetos, nos três agentes
+npx skills add pedroct/refinamento-planejamento-tecnico --all -a claude-code -a cursor -a codex -g
 ```
 
 ### Atualização
@@ -177,9 +186,17 @@ npx skills add pedroct/refinamento-planejamento-tecnico --skill '*' -a '*' -y
 ```
 
 Ele é idempotente: repõe o que falta, preserva o que já está instalado e mantém o layout canônico.
-Use-o como sincronização periódica, não o `update`.
+Use-o como sincronização periódica, não o `update`. O script `scripts/sincronizar-skills.sh` embala
+exatamente esse comando (mesmo repositório, mesmos curingas), para não depender de lembrar a forma
+exata:
 
-Duas armadilhas que motivam a forma exata acima:
+```bash
+scripts/sincronizar-skills.sh          # escopo projeto
+scripts/sincronizar-skills.sh -g       # escopo global
+scripts/sincronizar-skills.sh -a claude-code -a cursor   # só nesses agentes
+```
+
+Duas armadilhas que motivam a forma exata acima (e que o script já evita):
 
 | Erro | O que acontece |
 |---|---|
