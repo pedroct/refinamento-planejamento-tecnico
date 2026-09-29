@@ -32,10 +32,12 @@ Negócio via `Custom.DemandaSpecTecnica`.
    prossiga sozinho — pergunte a pontuação a quem está na reunião e registre a resposta no backlog;
    ela se torna histórico para a próxima execução.
 5. Grave os Story Points sugeridos ou confirmados em `backlog.md`, um por História/Bug.
-6. Rode `gravar-spec-tecnica --demanda <id> --spec spec.md`. Mostre a `spec.md` completa antes de
-   confirmar. A CLI pede a frase de autorização; ela só grava (`PATCH`) se a resposta for
-   **exatamente** igual — variação de caixa, acentuação ou Demanda errada é recusada sem chamada
-   alguma ao Azure Boards.
+6. Rode `gravar-spec-tecnica --demanda <id> --spec spec.md`. Se `backlog.md` existir na pasta da
+   Demanda, inclua `--backlog <caminho>/backlog.md` no mesmo comando — sem essa flag, o anexo
+   remoto de `backlog.md` não é atualizado e os Story Points gravados nos passos 4-5 ficam só
+   localmente. Mostre a `spec.md` completa antes de confirmar. A CLI pede a frase de autorização;
+   ela só grava (`PATCH`) se a resposta for **exatamente** igual — variação de caixa, acentuação
+   ou Demanda errada é recusada sem chamada alguma ao Azure Boards.
 
 ## O que esta skill nunca faz
 

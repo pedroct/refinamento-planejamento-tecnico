@@ -215,6 +215,43 @@ def test_gravar_spec_tecnica_com_backlog_inexistente_devolve_codigo_de_erro(
     assert "/caminho/que/nao/existe.md" in saida
 
 
+def test_gravar_spec_tecnica_com_falha_no_anexo_apos_campo_gravado_pede_verificacao_manual(
+    tmp_path: Path, capsys: object
+) -> None:
+    """Achado 2 da revisão whole-branch: gravar_campo tem sucesso, mas anexar_arquivo (para
+    spec.md) falha. A mensagem precisa deixar claro que o campo já foi gravado no Azure
+    Boards, para quem lê não repetir a operação achando que nada aconteceu."""
+    import pytest as _pytest
+
+    from refinar_tecnicamente.cliente_azure_devops import (
+        ClienteAzureDevOps,
+        ErroFalhaTransitoria,
+    )
+
+    spec = tmp_path / "spec.md"
+    spec.write_text("# Spec\n", encoding="utf-8")
+
+    def _anexar_falha(self, work_item_id, nome_arquivo, conteudo):  # type: ignore[no-untyped-def]
+        raise ErroFalhaTransitoria(f"falha simulada ao anexar {nome_arquivo}")
+
+    monkeypatch = _pytest.MonkeyPatch()
+    monkeypatch.setattr(ClienteAzureDevOps, "gravar_campo", lambda *_a, **_kw: None)
+    monkeypatch.setattr(ClienteAzureDevOps, "anexar_arquivo", _anexar_falha)
+    try:
+        codigo = executar(
+            ["gravar-spec-tecnica", "--demanda", "13959", "--spec", str(spec)],
+            env=_ENV,
+            entrada=lambda _prompt: "AUTORIZAR GRAVAÇÃO SPEC TÉCNICA #13959",
+        )
+    finally:
+        monkeypatch.undo()
+    saida = capsys.readouterr().out  # type: ignore[attr-defined]
+    assert codigo == 1
+    assert "já foi gravado" in saida
+    assert "verifi" in saida.lower()  # "verifique"/"verificação" manual
+    assert "Traceback" not in saida
+
+
 def test_resolver_spec_com_pasta_local_imprime_o_caminho(
     tmp_path: Path, capsys: object
 ) -> None:

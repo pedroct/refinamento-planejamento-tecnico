@@ -74,6 +74,12 @@ def resolver_spec(cliente: _ClienteLeitura, *, raiz: Path, id_demanda: int) -> P
             f"Demanda {id_demanda}: nenhuma pasta local em {raiz / 'docs' / 'specs'} e "
             "nenhum anexo spec.md nessa Demanda. A spec ainda não foi publicada."
         )
+    # backlog.md é opcional, mas se o download dele falhar (exceção do cliente), nada pode
+    # já ter sido gravado em disco — senão a próxima execução acharia uma pasta local
+    # incompleta (só com spec.md) e a devolveria como resultado válido, sem nunca baixar o
+    # backlog nem avisar ninguém. Por isso todos os downloads acontecem antes de criar a
+    # pasta ou gravar qualquer arquivo.
+    backlog_bytes = cliente.baixar_anexo(id_demanda, "backlog.md")
     work_item = cliente.ler_work_item(id_demanda)
     campos = work_item.get("fields")
     titulo = campos.get("System.Title", "") if isinstance(campos, dict) else ""
@@ -81,7 +87,6 @@ def resolver_spec(cliente: _ClienteLeitura, *, raiz: Path, id_demanda: int) -> P
     destino = raiz / "docs" / "specs" / nome_pasta
     destino.mkdir(parents=True, exist_ok=True)
     (destino / "spec.md").write_bytes(spec_bytes)
-    backlog_bytes = cliente.baixar_anexo(id_demanda, "backlog.md")
     if backlog_bytes is not None:
         (destino / "backlog.md").write_bytes(backlog_bytes)
     return destino

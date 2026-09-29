@@ -3,6 +3,7 @@ from typing import Any
 
 import pytest
 
+from refinar_tecnicamente.cliente_azure_devops import ErroDestinoInvalido
 from refinar_tecnicamente.resolver_spec import (
     ErroPastaAmbigua,
     ErroSpecNaoEncontrada,
@@ -21,6 +22,21 @@ class ClienteFalso:
 
     def baixar_anexo(self, work_item_id: int, nome_arquivo: str) -> bytes | None:
         return self._anexos.get(nome_arquivo)
+
+    def ler_work_item(self, work_item_id: int) -> dict[str, Any]:
+        return {"id": work_item_id, "fields": {"System.Title": self._titulo}}
+
+
+class ClienteFalsoComFalhaNoBacklog:
+    """Simula spec.md baixado com sucesso e backlog.md falhando por erro do cliente."""
+
+    def __init__(self, titulo: str = "Emissão de convites") -> None:
+        self._titulo = titulo
+
+    def baixar_anexo(self, work_item_id: int, nome_arquivo: str) -> bytes | None:
+        if nome_arquivo == "spec.md":
+            return b"# Spec\n"
+        raise ErroDestinoInvalido("falha simulada ao baixar backlog.md")
 
     def ler_work_item(self, work_item_id: int) -> dict[str, Any]:
         return {"id": work_item_id, "fields": {"System.Title": self._titulo}}
@@ -93,3 +109,16 @@ def test_resolver_spec_sem_pasta_local_e_sem_anexo_recusa(tmp_path: Path) -> Non
     cliente = ClienteFalso({})
     with pytest.raises(ErroSpecNaoEncontrada):
         resolver_spec(cliente, raiz=tmp_path, id_demanda=13959)
+
+
+def test_resolver_spec_com_falha_ao_baixar_backlog_nao_grava_nada_em_disco(
+    tmp_path: Path,
+) -> None:
+    """Achado 3 da revisão whole-branch: se o download de backlog.md falhar depois de
+    spec.md já ter sido baixado, nada pode ser gravado em disco — nem a pasta, nem
+    spec.md sozinho — senão a próxima execução acharia essa pasta incompleta e a
+    devolveria como resultado válido, sem nunca baixar o backlog."""
+    cliente = ClienteFalsoComFalhaNoBacklog()
+    with pytest.raises(ErroDestinoInvalido):
+        resolver_spec(cliente, raiz=tmp_path, id_demanda=13959)
+    assert not (tmp_path / "docs").exists()

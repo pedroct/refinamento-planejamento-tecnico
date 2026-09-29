@@ -19,6 +19,7 @@ from refinar_tecnicamente.cliente_azure_devops import (
 )
 from refinar_tecnicamente.configuracao import ErroConfiguracao, carregar_configuracao
 from refinar_tecnicamente.gravar_spec_tecnica import (
+    ErroAnexoAposCampoGravado,
     ErroConfirmacaoInvalida,
     ErroHtmlInvalido,
     converter_para_html,
@@ -157,6 +158,13 @@ def _gravar_spec_tecnica(
             )
     except ErroConfirmacaoInvalida as erro:
         print(str(erro))
+        return 1
+    except ErroAnexoAposCampoGravado as erro:
+        print(
+            f"O campo {campo} já foi gravado na Demanda {args.demanda}, mas o anexo do "
+            f"arquivo falhou: {erro.causa}. Não repita a gravação — verifique manualmente "
+            "o estado atual da Demanda no Azure Boards antes de tentar de novo."
+        )
         return 1
     print("Spec técnica gravada.")
     return 0

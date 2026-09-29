@@ -24,6 +24,20 @@ class ErroHtmlInvalido(ValueError):
     """O HTML gerado a partir da spec não está bem formado; a gravação é recusada."""
 
 
+class ErroAnexoAposCampoGravado(RuntimeError):
+    """`gravar_campo` teve sucesso, mas um `anexar_arquivo` (spec.md ou backlog.md) falhou.
+
+    Guarda a exceção original em `causa`. Quem chama sabe, ao capturar esta exceção, que o
+    campo já foi escrito no Azure Boards mesmo que o anexo não tenha sido — não é uma falha
+    total, e repetir a operação sem verificar o estado atual da Demanda arrisca confundir
+    quem lê.
+    """
+
+    def __init__(self, causa: BaseException) -> None:
+        super().__init__(str(causa))
+        self.causa = causa
+
+
 class _ValidadorDeAninhamento(HTMLParser):
     """Levanta erro na primeira tag de fechamento que não corresponde à mais recente aberta."""
 
@@ -95,6 +109,9 @@ def gravar_spec_tecnica(
         )
     html_final = html if html is not None else converter_para_html(spec_md)
     cliente.gravar_campo(id_demanda, campo, html_final)
-    cliente.anexar_arquivo(id_demanda, "spec.md", spec_md.encode("utf-8"))
-    if backlog_md is not None:
-        cliente.anexar_arquivo(id_demanda, "backlog.md", backlog_md.encode("utf-8"))
+    try:
+        cliente.anexar_arquivo(id_demanda, "spec.md", spec_md.encode("utf-8"))
+        if backlog_md is not None:
+            cliente.anexar_arquivo(id_demanda, "backlog.md", backlog_md.encode("utf-8"))
+    except Exception as erro:
+        raise ErroAnexoAposCampoGravado(erro) from erro
