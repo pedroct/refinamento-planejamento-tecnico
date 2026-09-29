@@ -418,3 +418,23 @@ def test_resolver_spec_sem_pasta_local_e_sem_anexo_devolve_codigo_de_erro(
     saida = capsys.readouterr().out  # type: ignore[attr-defined]
     assert codigo != 0
     assert "13959" in saida
+
+
+_SKILL_MD = Path(__file__).resolve().parents[1] / "SKILL.md"
+
+
+def test_skill_md_pergunta_perfil_antes_de_ler_lacunas() -> None:
+    texto = _SKILL_MD.read_text(encoding="utf-8")
+    assert "qual o perfil de quem está conduzindo esta sessão" in texto
+    assert "--perfil <fullstack|mobile>" in texto
+
+
+def test_skill_md_documenta_as_duas_subsecoes_da_abordagem_tecnica() -> None:
+    texto = _SKILL_MD.read_text(encoding="utf-8")
+    assert "### Escopo Fullstack (API/Web)" in texto
+    assert "### Escopo Mobile" in texto
+
+
+def test_skill_md_documenta_buscar_versao_mais_recente_antes_de_escrever() -> None:
+    texto = _SKILL_MD.read_text(encoding="utf-8")
+    assert "substituindo **só** a subseção do próprio perfil" in texto
