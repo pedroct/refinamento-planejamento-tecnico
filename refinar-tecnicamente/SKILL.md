@@ -20,13 +20,36 @@ Negócio via `Custom.DemandaSpecTecnica`.
    uma pasta local a partir deles. Use o caminho impresso em `stdout` nos passos seguintes. Se a
    CLI recusar (nem pasta local, nem anexo), pare e informe que a Demanda ainda não tem spec
    publicada — não peça o caminho manualmente, nem sugira rodar `gerador-hu` você mesmo.
-2. Rode `ler-lacunas spec.md` para isolar as lacunas técnicas (e as sem rótulo, que entram em toda
-   rodada). Conduza a entrevista em rodadas, no mesmo mecanismo de fronteira do
-   `entrevistar-lacunas-requisito`: pergunte os itens que não dependem de resposta ainda em aberto,
-   aceite adiamento explícito, nunca feche uma lacuna por inferência silenciosa.
-3. Com as lacunas técnicas fechadas, investigue o código-fonte e escreva a seção
-   `## Abordagem técnica` em `spec.md`: camadas tocadas, migração quando houver, estratégia de teste.
-   Cite `caminho:linha` para cada afirmação, na mesma disciplina do resto da spec.
+
+   Pergunte, antes de tudo, **qual o perfil de quem está conduzindo esta sessão**: `fullstack`
+   (backend + frontend web) ou `mobile`. Cada Demanda pode passar por duas sessões separadas,
+   uma por perfil, conduzidas por profissionais diferentes — a resposta desta pergunta decide o
+   filtro do passo 2 e a subseção do passo 3.
+
+2. Rode `ler-lacunas spec.md --perfil <fullstack|mobile>` para isolar as lacunas técnicas do
+   próprio perfil (e as sem rótulo, que entram em toda rodada; lacunas que citam evidência dos
+   dois perfis ao mesmo tempo também entram, por segurança). Conduza a entrevista em rodadas, no
+   mesmo mecanismo de fronteira do `entrevistar-lacunas-requisito`: pergunte os itens que não
+   dependem de resposta ainda em aberto, aceite adiamento explícito, nunca feche uma lacuna por
+   inferência silenciosa.
+3. Com as lacunas técnicas do próprio perfil fechadas, investigue o código-fonte e escreva **só a
+   subseção do próprio perfil** dentro de `## Abordagem técnica` em `spec.md`:
+
+   ```markdown
+   ## Abordagem técnica
+
+   ### Escopo Fullstack (API/Web)
+   <camadas tocadas, migração quando houver, estratégia de teste — só repositórios não-mobile>
+
+   ### Escopo Mobile
+   <camadas tocadas, migração quando houver, estratégia de teste — só repositórios mobile>
+   ```
+
+   Antes de escrever, rode `resolver-spec` de novo para buscar a versão mais recente de
+   `spec.md` — ela pode ter sido atualizada pela sessão do outro perfil, publicada em paralelo.
+   Monte o `spec.md` final substituindo **só** a subseção do próprio perfil; se a subseção do
+   outro perfil já existir no arquivo buscado, ela entra intacta, sem alteração nenhuma. Cite
+   `caminho:linha` para cada afirmação, na mesma disciplina do resto da spec.
 4. Para cada História/Bug do `backlog.md` associado, rode `sugerir-story-points --area-path <Area
    Path da Demanda> --tipo "User Story" --tipo Bug`. Quando a sugestão vier com `pontos: null`, não
    prossiga sozinho — pergunte a pontuação a quem está na reunião e registre a resposta no backlog;
