@@ -11,6 +11,7 @@ from __future__ import annotations
 import base64
 import time
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -110,6 +111,48 @@ class ClienteAzureDevOps:
         )
         self._verificar_e_decodificar(resposta, work_item_id)
 
+    def anexar_arquivo(self, work_item_id: int, nome_arquivo: str, conteudo: bytes) -> None:
+        """Anexa um arquivo ao work item: upload (POST) seguido de vínculo (PATCH).
+
+        Duas chamadas, cada uma numa única tentativa sem retry automático — mesmo raciocínio
+        de `gravar_campo`: depois que o POST de upload é aceito pelo servidor, um 5xx no PATCH
+        de vínculo deixa um blob órfão (aceito, mas não vinculado ao work item); repetir
+        sozinho arriscaria mascarar essa ambiguidade ou duplicar o upload.
+        """
+        url_upload = (
+            f"https://dev.azure.com/{self._organizacao}/{self._projeto}"
+            f"/_apis/wit/attachments?fileName={quote(nome_arquivo, safe='')}"
+            f"&api-version={_VERSAO_API}"
+        )
+        resposta_upload = self._executar_binario_sem_retry("POST", url_upload, conteudo)
+        payload_upload = self._verificar_e_decodificar(resposta_upload, work_item_id)
+        url_anexo = payload_upload.get("url")
+        if not isinstance(url_anexo, str) or not url_anexo:
+            raise ErroRespostaInvalida("O upload do anexo não devolveu uma URL válida.")
+        url_vinculo = (
+            f"https://dev.azure.com/{self._organizacao}/{self._projeto}"
+            f"/_apis/wit/workitems/{work_item_id}?api-version={_VERSAO_API}"
+        )
+        payload_vinculo = [
+            {
+                "op": "add",
+                "path": "/relations/-",
+                "value": {
+                    "rel": "AttachedFile",
+                    "url": url_anexo,
+                    "attributes": {"comment": nome_arquivo},
+                },
+            }
+        ]
+        resposta_vinculo = self._executar(
+            "PATCH",
+            url_vinculo,
+            corpo=payload_vinculo,
+            content_type="application/json-patch+json",
+            retentavel=False,
+        )
+        self._verificar_e_decodificar(resposta_vinculo, work_item_id)
+
     def usuario_autenticado(self) -> dict[str, Any]:
         """Devolve o perfil do titular do PAT (`displayName`, `emailAddress`)."""
         url = (
@@ -132,6 +175,23 @@ class ClienteAzureDevOps:
         if not retentavel:
             return self._executar_sem_retry(metodo, url, corpo, headers)
         return self._executar_com_retry(metodo, url, corpo, headers)
+
+    def _executar_binario_sem_retry(
+        self, metodo: str, url: str, conteudo: bytes
+    ) -> httpx.Response:
+        """Uma única tentativa sem retry, para upload de conteúdo binário (anexos)."""
+        headers = {"Content-Type": "application/octet-stream"}
+        try:
+            resposta = self._cliente.request(metodo, url, content=conteudo, headers=headers)
+        except httpx.RequestError as erro:
+            raise ErroFalhaTransitoria(
+                f"A chamada {metodo} {url} falhou por erro de rede."
+            ) from erro
+        if resposta.status_code in _ERROS_RETENTAVEIS:
+            raise ErroFalhaTransitoria(
+                f"A chamada {metodo} {url} não se completou (HTTP {resposta.status_code})."
+            )
+        return resposta
 
     def _executar_sem_retry(
         self, metodo: str, url: str, corpo: Any, headers: dict[str, str] | None

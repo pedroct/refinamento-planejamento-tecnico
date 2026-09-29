@@ -1,3 +1,5 @@
+import json
+
 import httpx
 import pytest
 
@@ -109,3 +111,58 @@ def test_usuario_autenticado_devolve_perfil() -> None:
     with _cliente(handler) as cliente:
         perfil = cliente.usuario_autenticado()
     assert perfil["emailAddress"] == "p@x"
+
+
+def test_anexar_arquivo_faz_upload_e_vincula_ao_work_item() -> None:
+    chamadas: list[tuple[str, str]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        chamadas.append((request.method, str(request.url)))
+        if request.method == "POST":
+            assert "attachments" in str(request.url)
+            assert "fileName=spec.md" in str(request.url)
+            assert request.headers["content-type"] == "application/octet-stream"
+            assert request.read() == b"# Spec\n"
+            return httpx.Response(
+                200, json={"id": "abc", "url": "https://dev.azure.com/anexo/abc"}
+            )
+        assert request.method == "PATCH"
+        corpo = json.loads(request.read())
+        assert corpo[0]["op"] == "add"
+        assert corpo[0]["path"] == "/relations/-"
+        assert corpo[0]["value"]["rel"] == "AttachedFile"
+        assert corpo[0]["value"]["url"] == "https://dev.azure.com/anexo/abc"
+        assert corpo[0]["value"]["attributes"]["comment"] == "spec.md"
+        return httpx.Response(200, json={"id": 5})
+
+    with _cliente(httpx.MockTransport(handler)) as cliente:
+        cliente.anexar_arquivo(5, "spec.md", b"# Spec\n")
+    assert [m for m, _ in chamadas] == ["POST", "PATCH"]
+
+
+def test_anexar_arquivo_nao_retenta_upload_em_falha_transitoria() -> None:
+    chamadas = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        chamadas["n"] += 1
+        return httpx.Response(503, json={})
+
+    with _cliente(httpx.MockTransport(handler)) as cliente, pytest.raises(ErroFalhaTransitoria):
+        cliente.anexar_arquivo(5, "spec.md", b"conteudo")
+    assert chamadas["n"] == 1
+
+
+def test_anexar_arquivo_com_upload_ok_e_vinculo_falho_nao_retenta_nenhum_dos_dois() -> None:
+    """O POST já foi aceito quando o PATCH de vínculo falha — o blob fica órfão no Azure
+    Boards. A chamada deve relatar isso e parar, nunca repetir o POST nem o PATCH sozinha."""
+    chamadas: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        chamadas.append(request.method)
+        if request.method == "POST":
+            return httpx.Response(200, json={"url": "https://dev.azure.com/anexo/abc"})
+        return httpx.Response(503, json={})
+
+    with _cliente(httpx.MockTransport(handler)) as cliente, pytest.raises(ErroFalhaTransitoria):
+        cliente.anexar_arquivo(5, "spec.md", b"conteudo")
+    assert chamadas == ["POST", "PATCH"]
