@@ -32,62 +32,58 @@ class Lacuna:
 
 
 Perfil = Literal["fullstack", "mobile", "ambos"]
+PerfilFiltro = Literal["fullstack", "mobile"]
 
 _CAMINHO_ENTRE_CRASES = re.compile(r"`([^`]+)`")
 
 
-def _parece_caminho(texto: str) -> bool:
-    """Verifica se o texto parece um caminho de repositório (ex.: 'repo/arquivo' ou
-    'repo/arquivo:linha'). Exclui texto livre sem '/' para não classificar evidências
-    como "Nenhuma referência" ou "Ver código" como caminhos."""
-    return re.match(r"\S+/\S+", texto) is not None
+def _repositorio_do_caminho(token: str) -> str | None:
+    """Devolve o nome do repositório se o token tem forma de caminho `repo/arquivo[:linha]`;
+    senão `None`. Só conta como caminho um token que contém '/', não é URL (sem '://') e cujo
+    primeiro segmento — o nome do repositório — contém '-' (ex.: `diligencia-api`,
+    `diligencia-mobile`). Identificadores (`PENDENTE`, `Custom.Campo`, `Arquivo.java:75`),
+    prosa como "API/Web" e "n/a"/"e/ou" não têm essa forma e não contribuem."""
+    token = token.strip().rstrip(".,;:!?)")
+    if "/" not in token or "://" in token or token.lower() in ("n/a", "e/ou"):
+        return None
+    repositorio = token.split("/", 1)[0]
+    return repositorio if "-" in repositorio else None
 
 
-def _tokens_com_forma_caminho(texto: str) -> list[str]:
-    """Extrai tokens que parecem caminhos (padrão repo/arquivo[:linha]) de uma string
-    com múltiplos tokens separados por espaço, vírgula ou ponto-e-vírgula.
-    Exclui palavras-chave 'n/a' e 'e/ou' que casam \\S+/\\S+ mas não são caminhos."""
-    if not texto:
-        return []
-    # Split por separadores: espaço, vírgula, ponto-e-vírgula
-    tokens = re.split(r"[\s,;]+", texto.strip())
-    caminhos = []
-    for token in tokens:
-        # Remove pontuação final (.,;:!?)")
-        token = token.rstrip(".,;:!?)")
-        # Verifica se parece um caminho e não é um caso especial
-        if _parece_caminho(token) and token.lower() not in ("n/a", "e/ou"):
-            caminhos.append(token)
-    return caminhos
+def _tokens_de_texto_livre(texto: str) -> list[str]:
+    """Separa por espaço, vírgula e ponto-e-vírgula o texto de uma evidência sem crases."""
+    return [token for token in re.split(r"[\s,;]+", texto.strip()) if token]
 
 
-def _e_caminho_mobile(caminho: str) -> bool:
-    """O primeiro segmento do caminho (antes de '/') é o nome do repositório; 'mobile' como
-    substring nele, case-insensitive, é a convenção observada nos repositórios reais
-    (`diligencia-mobile`). Limitação conhecida e aceita: um repositório cujo nome contenha
-    'mobile' sem ser o app mobile também classificaria como mobile."""
-    repositorio = caminho.split("/", 1)[0]
+def _e_repositorio_mobile(repositorio: str) -> bool:
+    """'mobile' como substring do nome do repositório, case-insensitive, é a convenção
+    observada nos repositórios reais (`diligencia-mobile`). Limitação conhecida e aceita: um
+    repositório cujo nome contenha 'mobile' sem ser o app mobile também classificaria como
+    mobile."""
     return "mobile" in repositorio.lower()
 
 
 def perfil_da_lacuna(lacuna: Lacuna) -> Perfil:
-    """Classifica pelos caminhos citados entre crases na pergunta e na evidência, juntos.
-    A evidência sem crases é interpretada como múltiplos tokens de caminho (padrão \\S+/\\S+),
-    separados por espaço/vírgula/ponto-e-vírgula, excluindo 'n/a' e 'e/ou'.
-    Texto livre sem "/" (ex.: "Nenhuma referência") não contribui.
+    """Classifica pelos caminhos `repo/arquivo` citados na pergunta e na evidência, juntos:
+    tokens entre crases e, quando a evidência não tem crases, seus tokens em texto livre.
+    Só um token com '/', sem '://' e com '-' no primeiro segmento conta como caminho (ver
+    `_repositorio_do_caminho`); o resto não contribui.
     Sem caminho nenhum, ou caminhos dos dois tipos ao mesmo tempo (mesmo campo ou campos
-    diferentes), o resultado é 'ambos' — nunca esconde uma pergunta por excesso de precisão."""
+    diferentes), o resultado é 'ambos' — a heurística só pode errar nessa direção, nunca
+    esconde uma pergunta por excesso de precisão."""
     texto = lacuna.pergunta + " " + (lacuna.evidencia or "")
-    caminhos = _CAMINHO_ENTRE_CRASES.findall(texto)
-
-    # Se a evidência não estiver vazia, não tiver caminhos entre crases,
-    # extrair tokens que pareçam caminhos
+    candidatos = _CAMINHO_ENTRE_CRASES.findall(texto)
     if lacuna.evidencia and not _CAMINHO_ENTRE_CRASES.search(lacuna.evidencia):
-        caminhos.extend(_tokens_com_forma_caminho(lacuna.evidencia))
+        candidatos.extend(_tokens_de_texto_livre(lacuna.evidencia))
 
-    if not caminhos:
+    repositorios = [
+        repositorio
+        for candidato in candidatos
+        if (repositorio := _repositorio_do_caminho(candidato)) is not None
+    ]
+    if not repositorios:
         return "ambos"
-    classificacoes = {_e_caminho_mobile(caminho) for caminho in caminhos}
+    classificacoes = {_e_repositorio_mobile(repositorio) for repositorio in repositorios}
     if len(classificacoes) > 1:
         return "ambos"
     return "mobile" if classificacoes.pop() else "fullstack"
@@ -158,7 +154,7 @@ def ler_lacunas(spec_md: str) -> list[Lacuna]:
     return lacunas
 
 
-def filtrar_tecnicas(lacunas: list[Lacuna], perfil: Perfil | None = None) -> list[Lacuna]:
+def filtrar_tecnicas(lacunas: list[Lacuna], perfil: PerfilFiltro | None = None) -> list[Lacuna]:
     """Devolve as lacunas Técnico e as sem rótulo, preservando a ordem original. Quando `perfil`
     é informado, descarta também as que `perfil_da_lacuna` classifica para o outro perfil —
     lacunas 'ambos' sempre passam, em qualquer perfil."""

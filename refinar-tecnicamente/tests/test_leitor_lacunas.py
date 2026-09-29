@@ -270,3 +270,32 @@ def test_perfil_da_lacuna_evidencia_na_ou_eou_sem_caminho() -> None:
 
     lacuna2 = _lacuna("Pergunta.", evidencia="e/ou")
     assert perfil_da_lacuna(lacuna2) == "ambos"
+
+
+@pytest.mark.parametrize(
+    "pergunta",
+    [
+        "O valor `PENDENTE` deve continuar existindo?",
+        "O campo `prazo` muda de tipo?",
+        "A flag `isMobile` ainda é usada?",
+        "Vale para `Custom.DemandaSpecTecnica`?",
+        "Ver `Diligencia.java:75` para o cálculo.",
+        "Ver `lib/features/x.dart:5` para a tela.",
+        "Consulte https://exemplo.com/docs/mobile-guia sobre isso.",
+        "Isso afeta API/Web ou só o resto?",
+    ],
+)
+def test_perfil_da_lacuna_sem_forma_de_repositorio_e_ambos(pergunta: str) -> None:
+    """Identificadores, arquivo sem repositório, URL e prosa como 'API/Web' não contribuem."""
+    assert perfil_da_lacuna(_lacuna(pergunta)) == "ambos"
+
+
+def test_perfil_da_lacuna_url_na_evidencia_e_ambos() -> None:
+    lacuna = _lacuna("Pergunta.", evidencia="https://dev.azure.com/org/proj/mobile-app")
+    assert perfil_da_lacuna(lacuna) == "ambos"
+
+
+def test_perfil_da_lacuna_identificador_nao_mascara_caminho_real() -> None:
+    """O identificador entre crases é ignorado; o caminho real ainda classifica."""
+    lacuna = _lacuna("O `PENDENTE` muda? Ver `diligencia-mobile/lib/x.dart:5`.")
+    assert perfil_da_lacuna(lacuna) == "mobile"

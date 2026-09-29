@@ -24,7 +24,12 @@ from refinar_tecnicamente.gravar_spec_tecnica import (
     gravar_spec_tecnica,
     montar_frase_autorizacao,
 )
-from refinar_tecnicamente.leitor_lacunas import ErroLacunaAmbigua, filtrar_tecnicas, ler_lacunas
+from refinar_tecnicamente.leitor_lacunas import (
+    ErroLacunaAmbigua,
+    PerfilFiltro,
+    filtrar_tecnicas,
+    ler_lacunas,
+)
 from refinar_tecnicamente.resolver_spec import (
     ErroPastaAmbigua,
     ErroSpecNaoEncontrada,
@@ -92,7 +97,7 @@ def _construir_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _ler_lacunas(caminho_spec: str, perfil: str | None = None) -> int:
+def _ler_lacunas(caminho_spec: str, perfil: PerfilFiltro | None = None) -> int:
     caminho = Path(caminho_spec)
     if not caminho.is_file():
         print(f"Spec não encontrada: {caminho_spec}")
