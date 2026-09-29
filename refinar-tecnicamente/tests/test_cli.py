@@ -72,7 +72,7 @@ def test_gravar_spec_tecnica_sem_confirmacao_exata_nao_chama_rede(
     assert "13959" in saida  # a frase esperada foi mostrada, nomeando a Demanda
 
 
-def test_gravar_spec_tecnica_mostra_o_html_antes_da_frase_de_confirmacao(
+def test_gravar_spec_tecnica_mostra_o_markdown_antes_da_frase_de_confirmacao(
     tmp_path: Path, capsys: object
 ) -> None:
     spec = tmp_path / "spec.md"
@@ -84,39 +84,10 @@ def test_gravar_spec_tecnica_mostra_o_html_antes_da_frase_de_confirmacao(
     )
     saida = capsys.readouterr().out  # type: ignore[attr-defined]
     assert codigo != 0
-    indice_html = saida.index("<h1>Título</h1>")
+    indice_markdown = saida.index("# Título\n\nParágrafo da spec.")
     indice_frase = saida.index("AUTORIZAR GRAVAÇÃO SPEC TÉCNICA #13959")
-    assert indice_html < indice_frase  # o HTML real aparece antes da frase de confirmação
-
-
-def test_gravar_spec_tecnica_com_html_invalido_recusa_sem_pedir_confirmacao(
-    tmp_path: Path, capsys: object, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """O renderizador usa `html: False`, então HTML cru digitado na spec é escapado e não
-    produz mais uma tag real inválida — simula a saída hostil do renderizador via
-    monkeypatch para continuar provando que a CLI recusa gravar sem pedir confirmação."""
-    import refinar_tecnicamente.gravar_spec_tecnica as gravar_spec_tecnica_modulo
-
-    spec = tmp_path / "spec.md"
-    spec.write_text("qualquer coisa\n", encoding="utf-8")
-    monkeypatch.setattr(
-        gravar_spec_tecnica_modulo,
-        "_renderizar_markdown",
-        lambda _spec_md: "<div><span>sem fechar",
-    )
-
-    def _entrada_nao_deveria_ser_chamada(_prompt: str) -> str:
-        raise AssertionError("entrada() não deveria ser chamada quando o HTML é inválido")
-
-    codigo = executar(
-        ["gravar-spec-tecnica", "--demanda", "13959", "--spec", str(spec)],
-        env=_ENV,
-        entrada=_entrada_nao_deveria_ser_chamada,
-    )
-    saida = capsys.readouterr().out  # type: ignore[attr-defined]
-    assert codigo == 1
-    assert "Traceback" not in saida
-    assert "inválido" in saida
+    assert indice_markdown < indice_frase  # o Markdown original aparece antes da confirmação
+    assert "<h1>" not in saida
 
 
 def test_gravar_spec_tecnica_usa_campo_configurado_por_padrao(

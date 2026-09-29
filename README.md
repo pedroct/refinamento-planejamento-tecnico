@@ -55,8 +55,9 @@ Na reunião técnica, sobre a `spec.md` de uma Demanda já publicada:
 - investiga o código e registra a abordagem técnica como seção nova de `spec.md`;
 - estima Story Points de cada História/Bug, ancorado em itens fechados comparáveis no mesmo Area
   Path — sem análogo, pergunta a quem está na reunião;
-- converte a spec atualizada para HTML e grava em `Custom.DemandaSpecTecnica`, só após confirmação
-  textual exata — e, na mesma operação, reanexa `spec.md` (e `backlog.md`, se houver) à Demanda,
+- grava a spec atualizada (Markdown, sem conversão — o campo já é Markdown nativo no Azure Boards) em
+  `Custom.DemandaSpecTecnica`, só após confirmação textual exata — e, na mesma operação, reanexa
+  `spec.md` (e `backlog.md`, se houver) à Demanda,
   para a próxima pessoa que rodar `resolver-spec` recuperar a versão mais recente.
 
 ```bash

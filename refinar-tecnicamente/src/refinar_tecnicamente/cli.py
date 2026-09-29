@@ -21,8 +21,6 @@ from refinar_tecnicamente.configuracao import ErroConfiguracao, carregar_configu
 from refinar_tecnicamente.gravar_spec_tecnica import (
     ErroAnexoAposCampoGravado,
     ErroConfirmacaoInvalida,
-    ErroHtmlInvalido,
-    converter_para_html,
     gravar_spec_tecnica,
     montar_frase_autorizacao,
 )
@@ -136,14 +134,9 @@ def _gravar_spec_tecnica(
             return 1
         backlog_md = caminho_backlog.read_text(encoding="utf-8")
     spec_md = caminho_spec.read_text(encoding="utf-8")
-    try:
-        html = converter_para_html(spec_md)
-    except ErroHtmlInvalido as erro:
-        print(f"HTML gerado a partir da spec é inválido, gravação recusada: {erro}")
-        return 1
     frase = montar_frase_autorizacao(args.demanda)
-    print(f"HTML que será gravado em {campo}:")
-    print(html)
+    print(f"Markdown que será gravado em {campo}:")
+    print(spec_md)
     print(f"Digite exatamente a frase abaixo para confirmar a gravação em {campo}:")
     print(frase)
     resposta = entrada("> ")
@@ -157,7 +150,6 @@ def _gravar_spec_tecnica(
                 campo=campo,
                 spec_md=spec_md,
                 resposta_confirmacao=resposta,
-                html=html,
                 backlog_md=backlog_md,
             )
     except ErroConfirmacaoInvalida as erro:
