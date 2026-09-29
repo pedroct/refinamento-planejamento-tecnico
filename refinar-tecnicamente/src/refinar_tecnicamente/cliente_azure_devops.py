@@ -161,18 +161,9 @@ class ClienteAzureDevOps:
         lista (`path: "/relations/-"`), então a ordem da lista já reflete a ordem de anexo.
         """
         work_item = self.ler_work_item(work_item_id)
-        relations = work_item.get("relations")
-        url_mais_recente: str | None = None
-        if isinstance(relations, list):
-            for relacao in relations:
-                if not isinstance(relacao, dict) or relacao.get("rel") != "AttachedFile":
-                    continue
-                atributos = relacao.get("attributes")
-                if not isinstance(atributos, dict) or atributos.get("comment") != nome_arquivo:
-                    continue
-                url = relacao.get("url")
-                if isinstance(url, str) and url:
-                    url_mais_recente = url
+        url_mais_recente = self._url_do_anexo_mais_recente(
+            work_item.get("relations"), nome_arquivo
+        )
         if url_mais_recente is None:
             return None
         resposta = self._executar("GET", url_mais_recente)
@@ -183,6 +174,23 @@ class ClienteAzureDevOps:
                 f"O download do anexo devolveu HTTP {resposta.status_code}."
             )
         return resposta.content
+
+    @staticmethod
+    def _url_do_anexo_mais_recente(relations: object, nome_arquivo: str) -> str | None:
+        """Devolve a URL do último elemento de `relations` que é um anexo com esse nome."""
+        if not isinstance(relations, list):
+            return None
+        url_mais_recente: str | None = None
+        for relacao in relations:
+            if not isinstance(relacao, dict) or relacao.get("rel") != "AttachedFile":
+                continue
+            atributos = relacao.get("attributes")
+            if not isinstance(atributos, dict) or atributos.get("comment") != nome_arquivo:
+                continue
+            url = relacao.get("url")
+            if isinstance(url, str) and url:
+                url_mais_recente = url
+        return url_mais_recente
 
     def usuario_autenticado(self) -> dict[str, Any]:
         """Devolve o perfil do titular do PAT (`displayName`, `emailAddress`)."""

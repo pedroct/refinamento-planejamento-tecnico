@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from refinar_tecnicamente.cli import executar
 
 _ENV = {
@@ -148,7 +150,7 @@ def test_gravar_spec_tecnica_com_arquivo_inexistente_devolve_codigo_de_erro(
 
 
 def test_gravar_spec_tecnica_com_backlog_anexa_backlog_md(
-    tmp_path: Path, capsys: object
+    tmp_path: Path, capsys: object, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from refinar_tecnicamente.cliente_azure_devops import ClienteAzureDevOps
 
@@ -158,32 +160,25 @@ def test_gravar_spec_tecnica_com_backlog_anexa_backlog_md(
     backlog.write_text("# Backlog\n", encoding="utf-8")
 
     anexados: list[tuple[int, str, bytes]] = []
-    original = ClienteAzureDevOps.anexar_arquivo
 
     def _anexar_espiao(self, work_item_id, nome_arquivo, conteudo):  # type: ignore[no-untyped-def]
         anexados.append((work_item_id, nome_arquivo, conteudo))
 
-    import pytest as _pytest
-
-    monkeypatch = _pytest.MonkeyPatch()
     monkeypatch.setattr(ClienteAzureDevOps, "anexar_arquivo", _anexar_espiao)
     monkeypatch.setattr(ClienteAzureDevOps, "gravar_campo", lambda *_a, **_kw: None)
-    try:
-        codigo = executar(
-            [
-                "gravar-spec-tecnica",
-                "--demanda",
-                "13959",
-                "--spec",
-                str(spec),
-                "--backlog",
-                str(backlog),
-            ],
-            env=_ENV,
-            entrada=lambda _prompt: "AUTORIZAR GRAVAÇÃO SPEC TÉCNICA #13959",
-        )
-    finally:
-        monkeypatch.undo()
+    codigo = executar(
+        [
+            "gravar-spec-tecnica",
+            "--demanda",
+            "13959",
+            "--spec",
+            str(spec),
+            "--backlog",
+            str(backlog),
+        ],
+        env=_ENV,
+        entrada=lambda _prompt: "AUTORIZAR GRAVAÇÃO SPEC TÉCNICA #13959",
+    )
     assert codigo == 0
     assert (13959, "backlog.md", b"# Backlog\n") in anexados
 
@@ -216,13 +211,11 @@ def test_gravar_spec_tecnica_com_backlog_inexistente_devolve_codigo_de_erro(
 
 
 def test_gravar_spec_tecnica_com_falha_no_anexo_apos_campo_gravado_pede_verificacao_manual(
-    tmp_path: Path, capsys: object
+    tmp_path: Path, capsys: object, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Achado 2 da revisão whole-branch: gravar_campo tem sucesso, mas anexar_arquivo (para
     spec.md) falha. A mensagem precisa deixar claro que o campo já foi gravado no Azure
     Boards, para quem lê não repetir a operação achando que nada aconteceu."""
-    import pytest as _pytest
-
     from refinar_tecnicamente.cliente_azure_devops import (
         ClienteAzureDevOps,
         ErroFalhaTransitoria,
@@ -234,17 +227,13 @@ def test_gravar_spec_tecnica_com_falha_no_anexo_apos_campo_gravado_pede_verifica
     def _anexar_falha(self, work_item_id, nome_arquivo, conteudo):  # type: ignore[no-untyped-def]
         raise ErroFalhaTransitoria(f"falha simulada ao anexar {nome_arquivo}")
 
-    monkeypatch = _pytest.MonkeyPatch()
     monkeypatch.setattr(ClienteAzureDevOps, "gravar_campo", lambda *_a, **_kw: None)
     monkeypatch.setattr(ClienteAzureDevOps, "anexar_arquivo", _anexar_falha)
-    try:
-        codigo = executar(
-            ["gravar-spec-tecnica", "--demanda", "13959", "--spec", str(spec)],
-            env=_ENV,
-            entrada=lambda _prompt: "AUTORIZAR GRAVAÇÃO SPEC TÉCNICA #13959",
-        )
-    finally:
-        monkeypatch.undo()
+    codigo = executar(
+        ["gravar-spec-tecnica", "--demanda", "13959", "--spec", str(spec)],
+        env=_ENV,
+        entrada=lambda _prompt: "AUTORIZAR GRAVAÇÃO SPEC TÉCNICA #13959",
+    )
     saida = capsys.readouterr().out  # type: ignore[attr-defined]
     assert codigo == 1
     assert "já foi gravado" in saida
@@ -266,13 +255,10 @@ def test_resolver_spec_com_pasta_local_imprime_o_caminho(
 
 
 def test_resolver_spec_sem_pasta_local_baixa_e_usa_convencao_de_pasta(
-    tmp_path: Path, capsys: object
+    tmp_path: Path, capsys: object, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from refinar_tecnicamente.cliente_azure_devops import ClienteAzureDevOps
 
-    import pytest as _pytest
-
-    monkeypatch = _pytest.MonkeyPatch()
     monkeypatch.setattr(
         ClienteAzureDevOps,
         "baixar_anexo",
@@ -285,12 +271,9 @@ def test_resolver_spec_sem_pasta_local_baixa_e_usa_convencao_de_pasta(
             "id": id_demanda, "fields": {"System.Title": "Emissao de Convites"}
         },
     )
-    try:
-        codigo = executar(
-            ["resolver-spec", "--demanda", "13959", "--raiz", str(tmp_path)], env=_ENV
-        )
-    finally:
-        monkeypatch.undo()
+    codigo = executar(
+        ["resolver-spec", "--demanda", "13959", "--raiz", str(tmp_path)], env=_ENV
+    )
     saida = capsys.readouterr().out  # type: ignore[attr-defined]
     esperado = tmp_path / "docs" / "specs" / "DN-13959-emissao-de-convites"
     assert codigo == 0
@@ -299,22 +282,16 @@ def test_resolver_spec_sem_pasta_local_baixa_e_usa_convencao_de_pasta(
 
 
 def test_resolver_spec_sem_pasta_local_e_sem_anexo_devolve_codigo_de_erro(
-    tmp_path: Path, capsys: object
+    tmp_path: Path, capsys: object, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from refinar_tecnicamente.cliente_azure_devops import ClienteAzureDevOps
 
-    import pytest as _pytest
-
-    monkeypatch = _pytest.MonkeyPatch()
     monkeypatch.setattr(
         ClienteAzureDevOps, "baixar_anexo", lambda *_a, **_kw: None
     )
-    try:
-        codigo = executar(
-            ["resolver-spec", "--demanda", "13959", "--raiz", str(tmp_path)], env=_ENV
-        )
-    finally:
-        monkeypatch.undo()
+    codigo = executar(
+        ["resolver-spec", "--demanda", "13959", "--raiz", str(tmp_path)], env=_ENV
+    )
     saida = capsys.readouterr().out  # type: ignore[attr-defined]
     assert codigo != 0
     assert "13959" in saida
