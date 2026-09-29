@@ -7,10 +7,10 @@ description: Use ao começar a codar uma História/Bug já refinada e decomposta
 
 ## Objetivo
 
-Ler o work item, subir até a Demanda, reunir a abordagem técnica (`Custom.DemandaSpecTecnica`), o
-contexto de negócio (`Custom.DemandaSpecNegocios`) e as Tasks já estimadas, verificar se há o mínimo
-necessário e montar um briefing único em Markdown. Esta skill nunca escreve no Azure Boards e nunca
-invoca `brainstorming` nem `writing-plans` — você leva o briefing a eles, na sua própria sessão.
+Ler o work item, subir até a Demanda, reunir a abordagem técnica (`Custom.DemandaSpecTecnica`) e as
+Tasks já estimadas, verificar se há o mínimo necessário e montar um briefing único em Markdown. Esta
+skill nunca escreve no Azure Boards e nunca invoca `brainstorming` nem `writing-plans` — você leva o
+briefing a eles, na sua própria sessão.
 
 ## Fluxo obrigatório
 

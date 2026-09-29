@@ -21,11 +21,8 @@ class ConfiguracaoPreparacao(BaseModel):
     token: SecretStr
     tipo_demanda: str = "Demanda de Negócio"
     campo_spec_tecnica: str = "Custom.DemandaSpecTecnica"
-    campo_spec_negocios: str = "Custom.DemandaSpecNegocios"
 
-    @field_validator(
-        "organizacao", "projeto", "tipo_demanda", "campo_spec_tecnica", "campo_spec_negocios"
-    )
+    @field_validator("organizacao", "projeto", "tipo_demanda", "campo_spec_tecnica")
     @classmethod
     def _validar_texto_obrigatorio(cls, valor: str) -> str:
         texto = valor.strip()
@@ -51,9 +48,6 @@ def carregar_configuracao(env: Mapping[str, str]) -> ConfiguracaoPreparacao:
             tipo_demanda=env.get("AZURE_DEVOPS_TIPO_DEMANDA", "Demanda de Negócio"),
             campo_spec_tecnica=env.get(
                 "AZURE_DEVOPS_CAMPO_SPEC_TECNICA", "Custom.DemandaSpecTecnica"
-            ),
-            campo_spec_negocios=env.get(
-                "AZURE_DEVOPS_CAMPO_SPEC_NEGOCIOS", "Custom.DemandaSpecNegocios"
             ),
         )
     except ValidationError as erro:

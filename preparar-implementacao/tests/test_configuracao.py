@@ -12,7 +12,6 @@ def test_carrega_configuracao_com_padroes() -> None:
     config = carregar_configuracao(env)
     assert config.tipo_demanda == "Demanda de Negócio"
     assert config.campo_spec_tecnica == "Custom.DemandaSpecTecnica"
-    assert config.campo_spec_negocios == "Custom.DemandaSpecNegocios"
 
 
 def test_recusa_configuracao_sem_token() -> None:

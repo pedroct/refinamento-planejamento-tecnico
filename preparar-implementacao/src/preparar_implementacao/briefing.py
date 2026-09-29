@@ -9,10 +9,9 @@ def montar_briefing(
     *,
     work_item: dict[str, Any],
     spec_tecnica: str,
-    spec_negocios: str | None,
     tasks: list[dict[str, Any]],
 ) -> str:
-    """Consolida work item, abordagem técnica, contexto de negócio e Tasks num único documento."""
+    """Consolida work item, abordagem técnica e Tasks num único documento."""
     campos = work_item["fields"]
     titulo = campos.get("System.Title", "")
     tipo = campos.get("System.WorkItemType", "")
@@ -36,11 +35,9 @@ def montar_briefing(
         "",
         spec_tecnica,
         "",
+        "## Tasks e estimativas",
+        "",
     ]
-    if spec_negocios:
-        partes += ["## Contexto de negócio", "", spec_negocios, ""]
-
-    partes += ["## Tasks e estimativas", ""]
     if not tasks:
         partes.append("Nenhuma Task filha encontrada.")
     for task in tasks:

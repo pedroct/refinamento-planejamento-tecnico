@@ -39,9 +39,6 @@ def executar(argv: list[str], *, env: Mapping[str, str]) -> int:
             spec_tecnica = extrair_campo_demanda(
                 cadeia, config.tipo_demanda, config.campo_spec_tecnica
             )
-            spec_negocios = extrair_campo_demanda(
-                cadeia, config.tipo_demanda, config.campo_spec_negocios
-            )
             tasks = ler_tasks(cliente, ids_tasks_filhas(work_item))
             criterios = work_item["fields"].get("Microsoft.VSTS.Common.AcceptanceCriteria")
             verificar_suficiencia(
@@ -62,7 +59,6 @@ def executar(argv: list[str], *, env: Mapping[str, str]) -> int:
     briefing = montar_briefing(
         work_item=work_item,
         spec_tecnica=spec_tecnica or "",
-        spec_negocios=spec_negocios,
         tasks=tasks,
     )
     print(briefing)

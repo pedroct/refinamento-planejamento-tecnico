@@ -30,22 +30,20 @@ def test_briefing_inclui_titulo_e_criterios() -> None:
     briefing = montar_briefing(
         work_item=_work_item("User Story"),
         spec_tecnica="<p>abordagem técnica</p>",
-        spec_negocios="<p>contexto de negócio</p>",
         tasks=[_task("Task A", 4.0)],
     )
     assert "Renovar diligência automaticamente" in briefing
     assert "abordagem técnica" in briefing
-    assert "contexto de negócio" in briefing
     assert "Dado que" in briefing
     assert "Task A" in briefing
     assert "4.0" in briefing
 
 
-def test_briefing_sem_spec_negocios_nao_quebra() -> None:
+def test_briefing_sem_tasks_avisa_que_nao_ha_task_filha() -> None:
     briefing = montar_briefing(
         work_item=_work_item("Bug"),
         spec_tecnica="<p>abordagem</p>",
-        spec_negocios=None,
         tasks=[],
     )
     assert "Renovar diligência automaticamente" in briefing
+    assert "Nenhuma Task filha encontrada." in briefing
