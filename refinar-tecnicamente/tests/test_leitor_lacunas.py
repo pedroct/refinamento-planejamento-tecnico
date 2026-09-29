@@ -57,6 +57,24 @@ def test_spec_sem_secao_devolve_lista_vazia() -> None:
     assert ler_lacunas("# Spec\n\n## Comportamento esperado\n\nTexto.\n") == []
 
 
+def test_secao_seguida_de_outra_secao_para_no_limite() -> None:
+    """A seção de lacunas não vai até o fim do arquivo — para na próxima `## `. Cobre o
+    ramo de corte de `_corpo_secao_lacunas` quando existe conteúdo depois da seção."""
+    spec = """# Spec
+
+## Lacunas e perguntas abertas
+
+- Qual o prazo padrão de expiração?
+
+## Riscos
+
+- Não deveria aparecer como lacuna.
+"""
+    lacunas = ler_lacunas(spec)
+    assert len(lacunas) == 1
+    assert lacunas[0].pergunta == "Qual o prazo padrão de expiração?"
+
+
 def test_filtrar_tecnicas_exclui_negocio_rotulado() -> None:
     lacunas = ler_lacunas(SPEC_COM_ROTULOS)
     tecnicas = filtrar_tecnicas(lacunas)

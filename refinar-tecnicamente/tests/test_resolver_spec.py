@@ -61,6 +61,16 @@ def test_localizar_pasta_local_sem_docs_specs_devolve_none(tmp_path: Path) -> No
     assert localizar_pasta_local(tmp_path, 13959) is None
 
 
+def test_localizar_pasta_local_com_docs_specs_mas_sem_pasta_correspondente_devolve_none(
+    tmp_path: Path,
+) -> None:
+    """`docs/specs/` existe (outras Demandas já publicadas), mas nenhuma pasta corresponde
+    a este ID — diferente do caso sem `docs/specs/` nenhum, testado acima."""
+    outra = tmp_path / "docs" / "specs" / "DN-1-outra-demanda"
+    outra.mkdir(parents=True)
+    assert localizar_pasta_local(tmp_path, 13959) is None
+
+
 def test_localizar_pasta_local_encontra_pasta_com_slug(tmp_path: Path) -> None:
     pasta = tmp_path / "docs" / "specs" / "DN-13959-emissao-de-convites"
     pasta.mkdir(parents=True)

@@ -95,6 +95,22 @@ def test_confirmacao_com_espaco_extra_ao_final_ainda_e_aceita() -> None:
     assert len(cliente.chamadas) == 1
 
 
+def test_recusa_html_com_tag_de_fechamento_nao_correspondente() -> None:
+    """HTML cru embutido na spec (`<p></div>`) — cobre o ramo de `handle_endtag` que compara
+    a tag de fechamento com o topo da pilha, diferente de `test_recusa_html_malformado`
+    (que testa tag nunca fechada, via `verificar_tudo_fechado`)."""
+    with pytest.raises(ErroHtmlInvalido):
+        converter_para_html("<p></div>\n")
+
+
+def test_aceita_tag_autofechada_nao_vazia() -> None:
+    """Tag com sintaxe de auto-fechamento (`<tag/>`) que não está entre as tags void
+    conhecidas (br, hr, img, ...) — rara, mas o parser precisa tratá-la como abertura e
+    fechamento imediatos, sem sobrar nada na pilha."""
+    html = converter_para_html("<minhatag/>\n")
+    assert "minhatag" in html
+
+
 def test_aceita_markdown_com_imagem() -> None:
     """Regressão: markdown com imagem (void tag) não deve levantar ErroHtmlInvalido."""
     html = converter_para_html("![alt](x.png)\n")

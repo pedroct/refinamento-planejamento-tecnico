@@ -52,6 +52,59 @@ def test_resposta_nao_json_levanta_erro_resposta_invalida() -> None:
         cliente.ler_work_item(1)
 
 
+def test_resposta_json_que_nao_e_objeto_levanta_erro_resposta_invalida() -> None:
+    handler = httpx.MockTransport(lambda _req: httpx.Response(200, json=[1, 2, 3]))
+    with _cliente(handler) as cliente, pytest.raises(ErroRespostaInvalida):
+        cliente.ler_work_item(1)
+
+
+def test_erro_http_generico_no_get_levanta_erro_destino_invalido() -> None:
+    """403 não é 404 nem um código retentável — deve virar ErroDestinoInvalido direto,
+    passando pelo ramo genérico `>= 400` de `_verificar_e_decodificar`."""
+    handler = httpx.MockTransport(lambda _req: httpx.Response(403, text="proibido"))
+    with _cliente(handler) as cliente, pytest.raises(ErroDestinoInvalido):
+        cliente.ler_work_item(1)
+
+
+def test_erro_de_rede_em_chamada_retentavel_esgota_tentativas() -> None:
+    chamadas = {"n": 0}
+
+    def handler(_req: httpx.Request) -> httpx.Response:
+        chamadas["n"] += 1
+        raise httpx.RequestError("falha de rede simulada")
+
+    with _cliente(httpx.MockTransport(handler)) as cliente, pytest.raises(ErroFalhaTransitoria):
+        cliente.ler_work_item(1)
+    assert chamadas["n"] == 3
+
+
+def test_erro_de_rede_em_chamada_nao_retentavel_levanta_na_primeira_tentativa() -> None:
+    chamadas = {"n": 0}
+
+    def handler(_req: httpx.Request) -> httpx.Response:
+        chamadas["n"] += 1
+        raise httpx.RequestError("falha de rede simulada")
+
+    with _cliente(httpx.MockTransport(handler)) as cliente, pytest.raises(ErroFalhaTransitoria):
+        cliente.gravar_campo(5, "Custom.DemandaSpecTecnica", "<p>spec</p>")
+    assert chamadas["n"] == 1
+
+
+def test_retry_sem_nenhuma_tentativa_disponivel_levanta_erro_generico(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Guarda de robustez: se `_MAX_TENTATIVAS` fosse 0 (não é, é uma constante fixa em 3),
+    o laço de retry nem chegaria a rodar uma vez, caindo no `raise` de fallback ao final de
+    `_executar_com_retry`. Cobre essa linha defensiva sem depender de rede real."""
+    import refinar_tecnicamente.cliente_azure_devops as modulo
+
+    monkeypatch.setattr(modulo, "_MAX_TENTATIVAS", 0)
+    handler = httpx.MockTransport(lambda _req: httpx.Response(200, json={"id": 1}))
+    with _cliente(handler) as cliente, pytest.raises(ErroFalhaTransitoria) as excinfo:
+        cliente.ler_work_item(1)
+    assert "não se completou." in str(excinfo.value)
+
+
 def test_consultar_wiql_devolve_ids_na_ordem() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"
@@ -67,6 +120,20 @@ def test_consultar_wiql_sem_resultado_devolve_lista_vazia() -> None:
     handler = httpx.MockTransport(lambda _req: httpx.Response(200, json={"workItems": []}))
     with _cliente(handler) as cliente:
         assert cliente.consultar_wiql("SELECT [System.Id] FROM WorkItems") == []
+
+
+def test_consultar_wiql_sem_lista_workitems_levanta_erro_resposta_invalida() -> None:
+    handler = httpx.MockTransport(lambda _req: httpx.Response(200, json={"workItems": "x"}))
+    with _cliente(handler) as cliente, pytest.raises(ErroRespostaInvalida):
+        cliente.consultar_wiql("SELECT [System.Id] FROM WorkItems")
+
+
+def test_consultar_wiql_com_item_sem_id_inteiro_levanta_erro_resposta_invalida() -> None:
+    handler = httpx.MockTransport(
+        lambda _req: httpx.Response(200, json={"workItems": [{"id": "não é inteiro"}]})
+    )
+    with _cliente(handler) as cliente, pytest.raises(ErroRespostaInvalida):
+        cliente.consultar_wiql("SELECT [System.Id] FROM WorkItems")
 
 
 def test_gravar_campo_envia_json_patch() -> None:
@@ -140,6 +207,24 @@ def test_anexar_arquivo_faz_upload_e_vincula_ao_work_item() -> None:
     assert [m for m, _ in chamadas] == ["POST", "PATCH"]
 
 
+def test_anexar_arquivo_com_upload_sem_url_levanta_erro_resposta_invalida() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST":
+            return httpx.Response(200, json={"id": "abc"})  # sem "url"
+        raise AssertionError("PATCH não deveria ser chamado sem URL de anexo válida")
+
+    with _cliente(httpx.MockTransport(handler)) as cliente, pytest.raises(ErroRespostaInvalida):
+        cliente.anexar_arquivo(5, "spec.md", b"# Spec\n")
+
+
+def test_anexar_arquivo_com_erro_de_rede_no_upload_levanta_erro_falha_transitoria() -> None:
+    def handler(_req: httpx.Request) -> httpx.Response:
+        raise httpx.RequestError("falha de rede simulada")
+
+    with _cliente(httpx.MockTransport(handler)) as cliente, pytest.raises(ErroFalhaTransitoria):
+        cliente.anexar_arquivo(5, "spec.md", b"conteudo")
+
+
 def test_anexar_arquivo_nao_retenta_upload_em_falha_transitoria() -> None:
     chamadas = {"n": 0}
 
@@ -174,6 +259,88 @@ def test_baixar_anexo_sem_nenhum_anexo_devolve_none() -> None:
     )
     with _cliente(handler) as cliente:
         assert cliente.baixar_anexo(5, "spec.md") is None
+
+
+def test_baixar_anexo_com_relations_ausente_devolve_none() -> None:
+    """`relations` nem sempre vem no payload (work item sem nenhuma relação) — o campo
+    ausente vira `None`, que não é uma lista; não deve ser tratado como anexo encontrado."""
+    handler = httpx.MockTransport(
+        lambda _req: httpx.Response(200, json={"id": 5, "fields": {}})
+    )
+    with _cliente(handler) as cliente:
+        assert cliente.baixar_anexo(5, "spec.md") is None
+
+
+def test_baixar_anexo_ignora_relacoes_de_outro_tipo_e_de_outro_arquivo() -> None:
+    handler = httpx.MockTransport(
+        lambda _req: httpx.Response(
+            200,
+            json={
+                "id": 5,
+                "fields": {},
+                "relations": [
+                    {"rel": "Related", "url": "https://dev.azure.com/x", "attributes": {}},
+                    {
+                        "rel": "AttachedFile",
+                        "url": "https://dev.azure.com/anexo/attachments/outro",
+                        "attributes": {"comment": "backlog.md"},
+                    },
+                    {"rel": "AttachedFile", "url": "https://dev.azure.com/sem-atributos"},
+                ],
+            },
+        )
+    )
+    with _cliente(handler) as cliente:
+        assert cliente.baixar_anexo(5, "spec.md") is None
+
+
+def test_baixar_anexo_inexistente_levanta_erro_destino_invalido_em_404() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "attachments/abc" in str(request.url):
+            return httpx.Response(404, json={})
+        return httpx.Response(
+            200,
+            json={
+                "id": 5,
+                "fields": {},
+                "relations": [
+                    {
+                        "rel": "AttachedFile",
+                        "url": "https://dev.azure.com/anexo/attachments/abc",
+                        "attributes": {"comment": "spec.md"},
+                    }
+                ],
+            },
+        )
+
+    with _cliente(httpx.MockTransport(handler)) as cliente, pytest.raises(ErroDestinoInvalido):
+        cliente.baixar_anexo(5, "spec.md")
+
+
+def test_baixar_anexo_com_erro_http_generico_levanta_erro_destino_invalido() -> None:
+    """403 não está entre os códigos retentáveis (408/429/500/502/503/504) — deve virar
+    ErroDestinoInvalido de imediato, sem esgotar as 3 tentativas de retry."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "attachments/abc" in str(request.url):
+            return httpx.Response(403, json={})
+        return httpx.Response(
+            200,
+            json={
+                "id": 5,
+                "fields": {},
+                "relations": [
+                    {
+                        "rel": "AttachedFile",
+                        "url": "https://dev.azure.com/anexo/attachments/abc",
+                        "attributes": {"comment": "spec.md"},
+                    }
+                ],
+            },
+        )
+
+    with _cliente(httpx.MockTransport(handler)) as cliente, pytest.raises(ErroDestinoInvalido):
+        cliente.baixar_anexo(5, "spec.md")
 
 
 def test_baixar_anexo_devolve_conteudo_do_anexo_existente() -> None:
