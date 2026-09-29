@@ -20,6 +20,14 @@ _SPEC = """# Spec
 - **T2 · Técnico** — Pergunta técnica?
 """
 
+_SPEC_MISTA_PERFIL = """# Spec
+
+## Lacunas e perguntas abertas
+
+- **T1 · Técnico** — Endpoint novo? Ver `diligencia-api/Servico.java:10`.
+- **T2 · Técnico** — Tela nova? Ver `diligencia-mobile/lib/x.dart:5`.
+"""
+
 
 def test_ler_lacunas_imprime_so_as_tecnicas(tmp_path: Path, capsys: object) -> None:
     spec = tmp_path / "spec.md"
@@ -49,6 +57,42 @@ def test_ler_lacunas_com_lacuna_ambigua_devolve_mensagem_limpa(
     saida = capsys.readouterr().out  # type: ignore[attr-defined]
     assert codigo == 1
     assert "Traceback" not in saida
+
+
+def test_ler_lacunas_com_perfil_mobile_filtra_saida(tmp_path: Path, capsys: object) -> None:
+    spec = tmp_path / "spec.md"
+    spec.write_text(_SPEC_MISTA_PERFIL, encoding="utf-8")
+    codigo = executar(["ler-lacunas", str(spec), "--perfil", "mobile"], env=_ENV)
+    saida = capsys.readouterr().out  # type: ignore[attr-defined]
+    lacunas = json.loads(saida)
+    assert codigo == 0
+    assert [lacuna["id"] for lacuna in lacunas] == ["T2"]
+
+
+def test_ler_lacunas_com_perfil_fullstack_filtra_saida(tmp_path: Path, capsys: object) -> None:
+    spec = tmp_path / "spec.md"
+    spec.write_text(_SPEC_MISTA_PERFIL, encoding="utf-8")
+    codigo = executar(["ler-lacunas", str(spec), "--perfil", "fullstack"], env=_ENV)
+    saida = capsys.readouterr().out  # type: ignore[attr-defined]
+    lacunas = json.loads(saida)
+    assert codigo == 0
+    assert [lacuna["id"] for lacuna in lacunas] == ["T1"]
+
+
+def test_ler_lacunas_com_perfil_invalido_devolve_erro_de_uso() -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        executar(["ler-lacunas", "spec.md", "--perfil", "backend"], env=_ENV)
+    assert excinfo.value.code == 2
+
+
+def test_ler_lacunas_sem_perfil_continua_sem_filtro(tmp_path: Path, capsys: object) -> None:
+    spec = tmp_path / "spec.md"
+    spec.write_text(_SPEC_MISTA_PERFIL, encoding="utf-8")
+    codigo = executar(["ler-lacunas", str(spec)], env=_ENV)
+    saida = capsys.readouterr().out  # type: ignore[attr-defined]
+    lacunas = json.loads(saida)
+    assert codigo == 0
+    assert [lacuna["id"] for lacuna in lacunas] == ["T1", "T2"]
 
 
 def test_gravar_spec_tecnica_sem_confirmacao_exata_nao_chama_rede(
@@ -110,9 +154,7 @@ def test_gravar_spec_tecnica_com_arquivo_inexistente_devolve_codigo_de_erro(
     capsys: object,
 ) -> None:
     def _entrada_nao_deveria_ser_chamada(_prompt: str) -> str:
-        raise AssertionError(
-            "entrada() não deveria ser chamada quando a spec não existe"
-        )
+        raise AssertionError("entrada() não deveria ser chamada quando a spec não existe")
 
     codigo = executar(
         [
@@ -222,14 +264,10 @@ def test_gravar_spec_tecnica_com_falha_no_anexo_apos_campo_gravado_pede_verifica
     assert "Traceback" not in saida
 
 
-def test_resolver_spec_com_pasta_local_imprime_o_caminho(
-    tmp_path: Path, capsys: object
-) -> None:
+def test_resolver_spec_com_pasta_local_imprime_o_caminho(tmp_path: Path, capsys: object) -> None:
     pasta = tmp_path / "docs" / "specs" / "DN-13959-slug"
     pasta.mkdir(parents=True)
-    codigo = executar(
-        ["resolver-spec", "--demanda", "13959", "--raiz", str(tmp_path)], env=_ENV
-    )
+    codigo = executar(["resolver-spec", "--demanda", "13959", "--raiz", str(tmp_path)], env=_ENV)
     saida = capsys.readouterr().out  # type: ignore[attr-defined]
     assert codigo == 0
     assert str(pasta.resolve()) in saida
@@ -249,12 +287,11 @@ def test_resolver_spec_sem_pasta_local_baixa_e_usa_convencao_de_pasta(
         ClienteAzureDevOps,
         "ler_work_item",
         lambda _self, id_demanda: {
-            "id": id_demanda, "fields": {"System.Title": "Emissao de Convites"}
+            "id": id_demanda,
+            "fields": {"System.Title": "Emissao de Convites"},
         },
     )
-    codigo = executar(
-        ["resolver-spec", "--demanda", "13959", "--raiz", str(tmp_path)], env=_ENV
-    )
+    codigo = executar(["resolver-spec", "--demanda", "13959", "--raiz", str(tmp_path)], env=_ENV)
     saida = capsys.readouterr().out  # type: ignore[attr-defined]
     esperado = tmp_path / "docs" / "specs" / "DN-13959-emissao-de-convites"
     assert codigo == 0
@@ -346,9 +383,7 @@ def test_comando_desconhecido_e_recusado_pelo_parser(
     def _parse_args_com_comando_bogus(self, _argv=None, _namespace=None):  # type: ignore[no-untyped-def]
         return argparse.Namespace(comando="bogus")
 
-    monkeypatch.setattr(
-        argparse.ArgumentParser, "parse_args", _parse_args_com_comando_bogus
-    )
+    monkeypatch.setattr(argparse.ArgumentParser, "parse_args", _parse_args_com_comando_bogus)
     with pytest.raises(SystemExit) as excinfo:
         cli_modulo.executar(["ler-lacunas", "spec.md"], env=_ENV)
     assert excinfo.value.code == 2
@@ -368,9 +403,7 @@ def test_comando_desconhecido_sem_parser_error_sair_devolve_2(
     def _error_sem_sair(self, _mensagem):  # type: ignore[no-untyped-def]
         return None
 
-    monkeypatch.setattr(
-        argparse.ArgumentParser, "parse_args", _parse_args_com_comando_bogus
-    )
+    monkeypatch.setattr(argparse.ArgumentParser, "parse_args", _parse_args_com_comando_bogus)
     monkeypatch.setattr(argparse.ArgumentParser, "error", _error_sem_sair)
     assert cli_modulo.executar(["ler-lacunas", "spec.md"], env=_ENV) == 2
 
@@ -380,12 +413,8 @@ def test_resolver_spec_sem_pasta_local_e_sem_anexo_devolve_codigo_de_erro(
 ) -> None:
     from refinar_tecnicamente.cliente_azure_devops import ClienteAzureDevOps
 
-    monkeypatch.setattr(
-        ClienteAzureDevOps, "baixar_anexo", lambda *_a, **_kw: None
-    )
-    codigo = executar(
-        ["resolver-spec", "--demanda", "13959", "--raiz", str(tmp_path)], env=_ENV
-    )
+    monkeypatch.setattr(ClienteAzureDevOps, "baixar_anexo", lambda *_a, **_kw: None)
+    codigo = executar(["resolver-spec", "--demanda", "13959", "--raiz", str(tmp_path)], env=_ENV)
     saida = capsys.readouterr().out  # type: ignore[attr-defined]
     assert codigo != 0
     assert "13959" in saida

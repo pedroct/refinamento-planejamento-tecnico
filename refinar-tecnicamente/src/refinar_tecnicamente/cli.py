@@ -39,7 +39,7 @@ def executar(
     args = parser.parse_args(argv)
     try:
         if args.comando == "ler-lacunas":
-            return _ler_lacunas(args.spec)
+            return _ler_lacunas(args.spec, args.perfil)
         if args.comando == "sugerir-story-points":
             return _sugerir_story_points(args, env)
         if args.comando == "gravar-spec-tecnica":
@@ -68,6 +68,7 @@ def _construir_parser() -> argparse.ArgumentParser:
 
     ler = subs.add_parser("ler-lacunas")
     ler.add_argument("spec")
+    ler.add_argument("--perfil", choices=["fullstack", "mobile"], default=None)
 
     sugerir = subs.add_parser("sugerir-story-points")
     sugerir.add_argument("--area-path", required=True)
@@ -91,16 +92,14 @@ def _construir_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _ler_lacunas(caminho_spec: str) -> int:
+def _ler_lacunas(caminho_spec: str, perfil: str | None = None) -> int:
     caminho = Path(caminho_spec)
     if not caminho.is_file():
         print(f"Spec não encontrada: {caminho_spec}")
         return 1
-    lacunas = filtrar_tecnicas(ler_lacunas(caminho.read_text(encoding="utf-8")))
+    lacunas = filtrar_tecnicas(ler_lacunas(caminho.read_text(encoding="utf-8")), perfil=perfil)
     print(
-        json.dumps(
-            [dataclasses.asdict(lacuna) for lacuna in lacunas], ensure_ascii=False, indent=2
-        )
+        json.dumps([dataclasses.asdict(lacuna) for lacuna in lacunas], ensure_ascii=False, indent=2)
     )
     return 0
 
