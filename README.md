@@ -15,8 +15,9 @@ gerador-hu (PO + negócio)
 
 refinamento-planejamento-tecnico
   refinar-tecnicamente        (reunião técnica)
-    └─ fecha lacunas técnicas, registra abordagem, estima Story Points
-       └─ grava Custom.DemandaSpecTecnica na Demanda
+    └─ resolve spec.md/backlog.md só pelo ID da Demanda (pasta local ou anexo remoto)
+       └─ fecha lacunas técnicas, registra abordagem, estima Story Points
+          └─ grava Custom.DemandaSpecTecnica e reanexa spec.md/backlog.md na Demanda
 
   decompor-tasks               (planning, por item, por quem executa)
     └─ decompõe em Tasks, estima horas, atribui a si, cria as Tasks
@@ -47,21 +48,30 @@ seguem esse padrão; troque só os caminhos e valores pelos da sua Demanda.
 
 Na reunião técnica, sobre a `spec.md` de uma Demanda já publicada:
 
+- resolve `spec.md`/`backlog.md` só pelo ID da Demanda — usa a pasta local
+  `docs/specs/DN-<id>-<slug>/` quando existe, ou baixa o anexo mais recente da própria Demanda e
+  materializa a pasta, sem nunca pedir caminho manualmente;
 - fecha as lacunas rotuladas `Técnico` por entrevista, em rodadas;
 - investiga o código e registra a abordagem técnica como seção nova de `spec.md`;
 - estima Story Points de cada História/Bug, ancorado em itens fechados comparáveis no mesmo Area
   Path — sem análogo, pergunta a quem está na reunião;
 - converte a spec atualizada para HTML e grava em `Custom.DemandaSpecTecnica`, só após confirmação
-  textual exata.
+  textual exata — e, na mesma operação, reanexa `spec.md` (e `backlog.md`, se houver) à Demanda,
+  para a próxima pessoa que rodar `resolver-spec` recuperar a versão mais recente.
 
 ```bash
 export $(grep -v '^#' refinar-tecnicamente/.env | xargs)
+uv run --directory refinar-tecnicamente refinar-tecnicamente resolver-spec \
+  --demanda 13959 --raiz /caminho/absoluto/do/repositorio
 uv run --directory refinar-tecnicamente refinar-tecnicamente ler-lacunas /caminho/absoluto/para/spec.md
 uv run --directory refinar-tecnicamente refinar-tecnicamente sugerir-story-points \
   --area-path "Projeto\\Time A" --tipo "User Story" --tipo Bug
 uv run --directory refinar-tecnicamente refinar-tecnicamente gravar-spec-tecnica \
-  --demanda 13959 --spec /caminho/absoluto/para/spec.md
+  --demanda 13959 --spec /caminho/absoluto/para/spec.md --backlog /caminho/absoluto/para/backlog.md
 ```
+
+`--backlog` é opcional em `gravar-spec-tecnica` — sem ele, o anexo remoto de `backlog.md` não é
+atualizado e os Story Points gravados ficam só na cópia local.
 
 ### `decompor-tasks`
 
@@ -86,7 +96,7 @@ uv run --directory decompor-tasks decompor-tasks criar \
 Ao começar a codar, pelo mesmo desenvolvedor:
 
 - lê a História/Bug e sobe a hierarquia até a Demanda;
-- lê `Custom.DemandaSpecTecnica` e `Custom.DemandaSpecNegocios`, e as Tasks irmãs com suas estimativas;
+- lê `Custom.DemandaSpecTecnica` e as Tasks irmãs com suas estimativas;
 - verifica suficiência — se faltar abordagem técnica, critério de aceitação ou alguma Task sem
   estimativa, recusa montar o briefing e nomeia exatamente o que falta;
 - monta um briefing único em Markdown, sem nenhuma escrita no Azure Boards e sem invocar
@@ -239,7 +249,6 @@ cp preparar-implementacao/.env.example preparar-implementacao/.env
 | `AZURE_DEVOPS_PROJETO` | ✅ | ✅ | ✅ |
 | `AZURE_DEVOPS_TOKEN` | ✅ | ✅ | ✅ |
 | `AZURE_DEVOPS_CAMPO_SPEC_TECNICA` | ✅ (`Custom.DemandaSpecTecnica`) | — | ✅ (`Custom.DemandaSpecTecnica`) |
-| `AZURE_DEVOPS_CAMPO_SPEC_NEGOCIOS` | — | — | ✅ (`Custom.DemandaSpecNegocios`) |
 | `AZURE_DEVOPS_TIPO_TASK` | — | ✅ (`Task`) | — |
 | `AZURE_DEVOPS_TIPO_DEMANDA` | — | — | ✅ (`Demanda de Negócio`) |
 
@@ -287,14 +296,17 @@ próprio arquivo), então essa duplicação entre elas é excluída do CPD (`son
 ## Pré-requisitos
 
 - `gerador-hu` publicado e configurado, com uma spec (`spec.md`) já gerada para a Demanda.
-- Os campos customizados `Custom.DemandaSpecTecnica` e `Custom.DemandaSpecNegocios`, criados no
-  processo do Azure DevOps (página "Spec" da Demanda de Negócio).
-- Um PAT do Azure DevOps com permissão de leitura e escrita em work items.
+- O campo customizado `Custom.DemandaSpecTecnica`, criado no processo do Azure DevOps (página
+  "Spec" da Demanda de Negócio).
+- Um PAT do Azure DevOps com permissão de leitura e escrita em work items (inclui anexos —
+  `resolver-spec`/`gravar-spec-tecnica` usam a Attachments API do próprio work item).
 
 ## Estado do projeto
 
-As três skills estão implementadas e testadas (119 testes no total, um pacote por skill). Lacunas
-conhecidas em relação à spec original, ainda não implementadas:
+As três skills estão implementadas e testadas (192 testes no total, um pacote por skill —
+`decompor-tasks` e `refinar-tecnicamente` em 100% de cobertura, `preparar-implementacao` em 99%,
+com uma única linha estruturalmente inalcançável). Lacunas conhecidas em relação à spec original,
+ainda não implementadas:
 
 - `preparar-implementacao` só aceita ID de História/Bug — não aceita ID de Task diretamente.
 - `decompor-tasks` não tem comando de CLI para subir até a Demanda nem para consultar o usuário
