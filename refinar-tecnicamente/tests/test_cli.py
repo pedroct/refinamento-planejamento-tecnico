@@ -213,3 +213,71 @@ def test_gravar_spec_tecnica_com_backlog_inexistente_devolve_codigo_de_erro(
     saida = capsys.readouterr().out  # type: ignore[attr-defined]
     assert codigo != 0
     assert "/caminho/que/nao/existe.md" in saida
+
+
+def test_resolver_spec_com_pasta_local_imprime_o_caminho(
+    tmp_path: Path, capsys: object
+) -> None:
+    pasta = tmp_path / "docs" / "specs" / "DN-13959-slug"
+    pasta.mkdir(parents=True)
+    codigo = executar(
+        ["resolver-spec", "--demanda", "13959", "--raiz", str(tmp_path)], env=_ENV
+    )
+    saida = capsys.readouterr().out  # type: ignore[attr-defined]
+    assert codigo == 0
+    assert str(pasta.resolve()) in saida
+
+
+def test_resolver_spec_sem_pasta_local_baixa_e_usa_convencao_de_pasta(
+    tmp_path: Path, capsys: object
+) -> None:
+    from refinar_tecnicamente.cliente_azure_devops import ClienteAzureDevOps
+
+    import pytest as _pytest
+
+    monkeypatch = _pytest.MonkeyPatch()
+    monkeypatch.setattr(
+        ClienteAzureDevOps,
+        "baixar_anexo",
+        lambda _self, _id, nome: b"# Spec\n" if nome == "spec.md" else None,
+    )
+    monkeypatch.setattr(
+        ClienteAzureDevOps,
+        "ler_work_item",
+        lambda _self, id_demanda: {
+            "id": id_demanda, "fields": {"System.Title": "Emissao de Convites"}
+        },
+    )
+    try:
+        codigo = executar(
+            ["resolver-spec", "--demanda", "13959", "--raiz", str(tmp_path)], env=_ENV
+        )
+    finally:
+        monkeypatch.undo()
+    saida = capsys.readouterr().out  # type: ignore[attr-defined]
+    esperado = tmp_path / "docs" / "specs" / "DN-13959-emissao-de-convites"
+    assert codigo == 0
+    assert str(esperado.resolve()) in saida
+    assert (esperado / "spec.md").read_text(encoding="utf-8") == "# Spec\n"
+
+
+def test_resolver_spec_sem_pasta_local_e_sem_anexo_devolve_codigo_de_erro(
+    tmp_path: Path, capsys: object
+) -> None:
+    from refinar_tecnicamente.cliente_azure_devops import ClienteAzureDevOps
+
+    import pytest as _pytest
+
+    monkeypatch = _pytest.MonkeyPatch()
+    monkeypatch.setattr(
+        ClienteAzureDevOps, "baixar_anexo", lambda *_a, **_kw: None
+    )
+    try:
+        codigo = executar(
+            ["resolver-spec", "--demanda", "13959", "--raiz", str(tmp_path)], env=_ENV
+        )
+    finally:
+        monkeypatch.undo()
+    saida = capsys.readouterr().out  # type: ignore[attr-defined]
+    assert codigo != 0
+    assert "13959" in saida

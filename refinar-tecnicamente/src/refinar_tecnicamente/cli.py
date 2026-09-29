@@ -26,6 +26,11 @@ from refinar_tecnicamente.gravar_spec_tecnica import (
     montar_frase_autorizacao,
 )
 from refinar_tecnicamente.leitor_lacunas import ErroLacunaAmbigua, filtrar_tecnicas, ler_lacunas
+from refinar_tecnicamente.resolver_spec import (
+    ErroPastaAmbigua,
+    ErroSpecNaoEncontrada,
+    resolver_spec,
+)
 
 
 def executar(
@@ -40,6 +45,8 @@ def executar(
             return _sugerir_story_points(args, env)
         if args.comando == "gravar-spec-tecnica":
             return _gravar_spec_tecnica(args, env, entrada)
+        if args.comando == "resolver-spec":
+            return _resolver_spec(args, env)
     except ErroConfiguracao as erro:
         print(f"Configuração inválida: {erro}")
         return 2
@@ -48,6 +55,9 @@ def executar(
         return 1
     except (ErroDestinoInvalido, ErroFalhaTransitoria, ErroRespostaInvalida) as erro:
         print(f"Falha ao falar com o Azure Boards: {erro}")
+        return 1
+    except (ErroPastaAmbigua, ErroSpecNaoEncontrada) as erro:
+        print(str(erro))
         return 1
     parser.error("comando desconhecido")
     return 2
@@ -74,6 +84,10 @@ def _construir_parser() -> argparse.ArgumentParser:
         help="Nome do campo customizado; por padrão usa o configurado "
         "(AZURE_DEVOPS_CAMPO_SPEC_TECNICA, ou Custom.DemandaSpecTecnica).",
     )
+
+    resolver = subs.add_parser("resolver-spec")
+    resolver.add_argument("--demanda", type=int, required=True)
+    resolver.add_argument("--raiz", required=True)
 
     return parser
 
@@ -145,4 +159,15 @@ def _gravar_spec_tecnica(
         print(str(erro))
         return 1
     print("Spec técnica gravada.")
+    return 0
+
+
+def _resolver_spec(args: argparse.Namespace, env: Mapping[str, str]) -> int:
+    raiz = Path(args.raiz)
+    config = carregar_configuracao(env)
+    with ClienteAzureDevOps(
+        config.organizacao, config.projeto, config.token.get_secret_value()
+    ) as cliente:
+        caminho = resolver_spec(cliente, raiz=raiz, id_demanda=args.demanda)
+    print(str(caminho.resolve()))
     return 0
