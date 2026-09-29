@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Mapping
+from typing import Any
 
 from preparar_implementacao.briefing import montar_briefing
 from preparar_implementacao.cliente_azure_devops import (
@@ -34,11 +35,12 @@ def executar(argv: list[str], *, env: Mapping[str, str]) -> int:
         with ClienteAzureDevOps(
             config.organizacao, config.projeto, config.token.get_secret_value()
         ) as cliente:
-            work_item = cliente.ler_work_item(args.work_item_id)
+            item_recebido = cliente.ler_work_item(args.work_item_id)
             cadeia = subir_ate_demanda(cliente, args.work_item_id, config.tipo_demanda)
             spec_tecnica = extrair_campo_demanda(
                 cadeia, config.tipo_demanda, config.campo_spec_tecnica
             )
+            work_item = _historia_ou_bug(item_recebido, cadeia, config.tipo_task)
             tasks = ler_tasks(cliente, ids_tasks_filhas(work_item))
             criterios = work_item["fields"].get("Microsoft.VSTS.Common.AcceptanceCriteria")
             verificar_suficiencia(
@@ -56,13 +58,27 @@ def executar(argv: list[str], *, env: Mapping[str, str]) -> int:
     except (ErroDestinoInvalido, ErroFalhaTransitoria, ErroRespostaInvalida) as erro:
         print(f"Falha ao falar com o Azure Boards: {erro}")
         return 1
+    id_task_origem = args.work_item_id if work_item is not item_recebido else None
     briefing = montar_briefing(
         work_item=work_item,
         spec_tecnica=spec_tecnica or "",
         tasks=tasks,
+        id_task_origem=id_task_origem,
     )
     print(briefing)
     return 0
+
+
+def _historia_ou_bug(
+    item_recebido: dict[str, Any], cadeia: list[dict[str, Any]], tipo_task: str
+) -> dict[str, Any]:
+    """Se o ID recebido for uma Task, devolve a História/Bug pai — é dela, não da Task, que
+    vêm as Tasks irmãs, o critério de aceitação e o título do briefing. `cadeia[1]` já é esse
+    pai (mesmo item lido por `subir_ate_demanda`, sem chamada extra), porque `cadeia[0]` é
+    sempre o próprio item recebido."""
+    if item_recebido["fields"].get("System.WorkItemType") != tipo_task or len(cadeia) < 2:
+        return item_recebido
+    return cadeia[1]
 
 
 def _construir_parser() -> argparse.ArgumentParser:

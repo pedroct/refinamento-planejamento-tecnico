@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from preparar_implementacao import cli
-from preparar_implementacao.cli import executar
+from preparar_implementacao.cli import _historia_ou_bug, executar
 from preparar_implementacao.cliente_azure_devops import ClienteAzureDevOps
 
 _ENV = {
@@ -188,6 +188,76 @@ def test_montar_com_falha_ao_falar_com_azure_boards_devolve_mensagem_limpa(
     assert codigo == 1
     assert "Falha ao falar com o Azure Boards" in saida
     assert "Traceback" not in saida
+
+
+def test_montar_com_id_de_task_sobe_ate_a_historia_pai_e_nomeia_a_troca(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    task_recebida = {
+        "id": _ID_TASK,
+        "fields": {
+            "System.Title": "Task A",
+            "System.WorkItemType": "Task",
+            "Microsoft.VSTS.Scheduling.OriginalEstimate": 4.0,
+            "Microsoft.VSTS.Scheduling.RemainingWork": 4.0,
+        },
+        "relations": [
+            {
+                "rel": "System.LinkTypes.Hierarchy-Reverse",
+                "url": f"https://dev.azure.com/org/proj/_apis/wit/workItems/{_ID_HISTORIA}",
+            },
+        ],
+    }
+    itens = {
+        _ID_TASK: task_recebida,
+        _ID_HISTORIA: _historia(com_criterios=True),
+        _ID_DEMANDA: _demanda(com_spec_tecnica=True),
+    }
+    _instalar_cliente_falso(monkeypatch, itens)
+
+    codigo = executar(["montar", str(_ID_TASK)], env=_ENV)
+
+    saida = capsys.readouterr().out
+    assert codigo == 0
+    assert f"Recebido com o ID da Task #{_ID_TASK}" in saida
+    assert "Renovar diligência automaticamente" in saida  # título da História, não da Task
+    assert "Task A" in saida  # a própria Task volta como Task irmã, listada pela História
+
+
+def test_montar_com_id_de_historia_nao_mostra_nota_de_origem(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    itens = {
+        _ID_HISTORIA: _historia(com_criterios=True),
+        _ID_DEMANDA: _demanda(com_spec_tecnica=True),
+        _ID_TASK: _task(com_estimativas=True),
+    }
+    _instalar_cliente_falso(monkeypatch, itens)
+
+    codigo = executar(["montar", str(_ID_HISTORIA)], env=_ENV)
+
+    saida = capsys.readouterr().out
+    assert codigo == 0
+    assert "Recebido com o ID da Task" not in saida
+
+
+class TestHistoriaOuBug:
+    """`_historia_ou_bug` isolada dos testes de CLI de ponta a ponta — inclusive o ramo
+    defensivo (Task sem cadeia até a Demanda), inalcançável via `executar()` porque
+    `subir_ate_demanda` já levantaria `ErroHierarquiaIncompleta` antes disso."""
+
+    def test_item_que_nao_e_task_e_devolvido_sem_mudanca(self) -> None:
+        historia = {"id": 1, "fields": {"System.WorkItemType": "User Story"}}
+        assert _historia_ou_bug(historia, [historia, {"id": 2}], "Task") is historia
+
+    def test_task_com_cadeia_completa_devolve_o_pai(self) -> None:
+        task = {"id": 10, "fields": {"System.WorkItemType": "Task"}}
+        pai = {"id": 100, "fields": {"System.WorkItemType": "User Story"}}
+        assert _historia_ou_bug(task, [task, pai, {"id": 50}], "Task") is pai
+
+    def test_task_sem_pai_na_cadeia_devolve_a_propria_task(self) -> None:
+        task = {"id": 10, "fields": {"System.WorkItemType": "Task"}}
+        assert _historia_ou_bug(task, [task], "Task") is task
 
 
 def test_montar_com_comando_desconhecido_devolve_codigo_2(

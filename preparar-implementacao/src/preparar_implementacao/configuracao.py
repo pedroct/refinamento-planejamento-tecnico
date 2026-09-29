@@ -20,9 +20,10 @@ class ConfiguracaoPreparacao(BaseModel):
     projeto: str
     token: SecretStr
     tipo_demanda: str = "Demanda de Negócio"
+    tipo_task: str = "Task"
     campo_spec_tecnica: str = "Custom.DemandaSpecTecnica"
 
-    @field_validator("organizacao", "projeto", "tipo_demanda", "campo_spec_tecnica")
+    @field_validator("organizacao", "projeto", "tipo_demanda", "tipo_task", "campo_spec_tecnica")
     @classmethod
     def _validar_texto_obrigatorio(cls, valor: str) -> str:
         texto = valor.strip()
@@ -46,6 +47,7 @@ def carregar_configuracao(env: Mapping[str, str]) -> ConfiguracaoPreparacao:
             projeto=env.get("AZURE_DEVOPS_PROJETO", ""),
             token=SecretStr(env.get("AZURE_DEVOPS_TOKEN", "")),
             tipo_demanda=env.get("AZURE_DEVOPS_TIPO_DEMANDA", "Demanda de Negócio"),
+            tipo_task=env.get("AZURE_DEVOPS_TIPO_TASK", "Task"),
             campo_spec_tecnica=env.get(
                 "AZURE_DEVOPS_CAMPO_SPEC_TECNICA", "Custom.DemandaSpecTecnica"
             ),

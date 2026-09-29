@@ -14,7 +14,8 @@ briefing a eles, na sua própria sessão.
 
 ## Fluxo obrigatório
 
-1. Receba o ID da História/Bug (ou de uma Task específica, se você já souber qual).
+1. Receba o ID da História/Bug (ou de uma Task específica, se você já souber qual — a CLI sobe
+   até a História/Bug pai sozinha e nomeia essa troca no briefing).
 2. Rode `preparar-implementacao montar <id>`.
 3. Se faltar spec técnica, critério de aceitação ou alguma Task sem estimativa, a CLI recusa montar o
    briefing e nomeia exatamente o que falta — volte para `refinar-tecnicamente` ou `decompor-tasks`

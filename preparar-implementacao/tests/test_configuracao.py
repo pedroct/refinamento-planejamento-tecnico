@@ -11,6 +11,7 @@ def test_carrega_configuracao_com_padroes() -> None:
     }
     config = carregar_configuracao(env)
     assert config.tipo_demanda == "Demanda de Negócio"
+    assert config.tipo_task == "Task"
     assert config.campo_spec_tecnica == "Custom.DemandaSpecTecnica"
 
 

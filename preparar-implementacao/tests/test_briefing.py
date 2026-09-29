@@ -47,3 +47,23 @@ def test_briefing_sem_tasks_avisa_que_nao_ha_task_filha() -> None:
     )
     assert "Renovar diligência automaticamente" in briefing
     assert "Nenhuma Task filha encontrada." in briefing
+
+
+def test_briefing_com_id_task_origem_inclui_nota_de_rastreabilidade() -> None:
+    briefing = montar_briefing(
+        work_item=_work_item("User Story"),
+        spec_tecnica="<p>abordagem</p>",
+        tasks=[],
+        id_task_origem=999,
+    )
+    assert "Recebido com o ID da Task #999" in briefing
+    assert "User Story pai #1" in briefing
+
+
+def test_briefing_sem_id_task_origem_nao_inclui_nota() -> None:
+    briefing = montar_briefing(
+        work_item=_work_item("User Story"),
+        spec_tecnica="<p>abordagem</p>",
+        tasks=[],
+    )
+    assert "Recebido com o ID da Task" not in briefing

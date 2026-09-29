@@ -10,8 +10,15 @@ def montar_briefing(
     work_item: dict[str, Any],
     spec_tecnica: str,
     tasks: list[dict[str, Any]],
+    id_task_origem: int | None = None,
 ) -> str:
-    """Consolida work item, abordagem técnica e Tasks num único documento."""
+    """Consolida work item, abordagem técnica e Tasks num único documento.
+
+    `work_item` é sempre a História/Bug, nunca uma Task — quando o ID recebido pelo comando
+    era o de uma Task, `id_task_origem` carrega esse ID só para a nota de rastreabilidade;
+    o restante do briefing (Tasks irmãs, critério de aceitação, título) já vem resolvido
+    contra a História/Bug pai.
+    """
     campos = work_item["fields"]
     titulo = campos.get("System.Title", "")
     tipo = campos.get("System.WorkItemType", "")
@@ -23,6 +30,15 @@ def montar_briefing(
     partes = [
         f"# Briefing de implementação — {tipo} #{work_item.get('id')}: {titulo}",
         "",
+    ]
+    if id_task_origem is not None:
+        partes += [
+            f"> Recebido com o ID da Task #{id_task_origem} — este briefing foi montado a "
+            f"partir da {tipo} pai #{work_item.get('id')}, de onde vêm as Tasks irmãs e o "
+            "critério de aceitação.",
+            "",
+        ]
+    partes += [
         "## Descrição",
         "",
         descricao,

@@ -95,6 +95,9 @@ uv run --directory decompor-tasks decompor-tasks criar \
 
 Ao começar a codar, pelo mesmo desenvolvedor:
 
+- aceita o ID da História/Bug **ou de uma Task específica** — se for uma Task, sobe até a
+  História/Bug pai sozinha (é dela que vêm as Tasks irmãs e o critério de aceitação) e nomeia
+  essa troca no topo do briefing;
 - lê a História/Bug e sobe a hierarquia até a Demanda;
 - lê `Custom.DemandaSpecTecnica` e as Tasks irmãs com suas estimativas;
 - verifica suficiência — se faltar abordagem técnica, critério de aceitação ou alguma Task sem
@@ -249,7 +252,7 @@ cp preparar-implementacao/.env.example preparar-implementacao/.env
 | `AZURE_DEVOPS_PROJETO` | ✅ | ✅ | ✅ |
 | `AZURE_DEVOPS_TOKEN` | ✅ | ✅ | ✅ |
 | `AZURE_DEVOPS_CAMPO_SPEC_TECNICA` | ✅ (`Custom.DemandaSpecTecnica`) | — | ✅ (`Custom.DemandaSpecTecnica`) |
-| `AZURE_DEVOPS_TIPO_TASK` | — | ✅ (`Task`) | — |
+| `AZURE_DEVOPS_TIPO_TASK` | — | ✅ (`Task`) | ✅ (`Task`) |
 | `AZURE_DEVOPS_TIPO_DEMANDA` | — | — | ✅ (`Demanda de Negócio`) |
 
 O `.env.example` já vem com os valores padrão preenchidos para os campos e tipos — normalmente só
@@ -303,12 +306,11 @@ próprio arquivo), então essa duplicação entre elas é excluída do CPD (`son
 
 ## Estado do projeto
 
-As três skills estão implementadas e testadas (192 testes no total, um pacote por skill —
+As três skills estão implementadas e testadas (199 testes no total, um pacote por skill —
 `decompor-tasks` e `refinar-tecnicamente` em 100% de cobertura, `preparar-implementacao` em 99%,
 com uma única linha estruturalmente inalcançável). Lacunas conhecidas em relação à spec original,
 ainda não implementadas:
 
-- `preparar-implementacao` só aceita ID de História/Bug — não aceita ID de Task diretamente.
 - `decompor-tasks` não tem comando de CLI para subir até a Demanda nem para consultar o usuário
   autenticado do PAT (`usuario_autenticado()` existe no cliente, mas não é exposto).
 - Nenhum pacote lê `.env` automaticamente nem pede o PAT interativamente sem eco — a configuração
