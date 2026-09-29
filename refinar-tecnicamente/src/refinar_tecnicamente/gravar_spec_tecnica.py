@@ -13,6 +13,7 @@ _TAGS_SEM_FECHAMENTO = frozenset({"br", "hr", "img", "input", "meta", "col", "wb
 
 class _ClienteEscrita(Protocol):
     def gravar_campo(self, work_item_id: int, campo: str, valor: str) -> None: ...
+    def anexar_arquivo(self, work_item_id: int, nome_arquivo: str, conteudo: bytes) -> None: ...
 
 
 class ErroConfirmacaoInvalida(ValueError):
@@ -79,13 +80,13 @@ def gravar_spec_tecnica(
     spec_md: str,
     resposta_confirmacao: str,
     html: str | None = None,
+    backlog_md: str | None = None,
 ) -> None:
-    """Grava a spec técnica convertida, só após confirmação textual exata.
+    """Grava a spec técnica convertida e reanexa spec.md/backlog.md, só após confirmação exata.
 
-    `html` é o HTML já convertido e validado (o chamador — a CLI — converte antes de mostrar
-    o conteúdo para confirmação, como exige o fluxo de escrita). Quando omitido, esta função
-    converte internamente como rede de segurança; como `converter_para_html` é pura, produz
-    o mesmo resultado para o mesmo `spec_md`.
+    `html` é o HTML já convertido e validado (a CLI converte antes de mostrar o conteúdo para
+    confirmação). `backlog_md`, quando informado, é anexado como `backlog.md` na mesma operação
+    — mantém o anexo remoto tão atual quanto a spec técnica que acabou de ser gravada.
     """
     frase_esperada = montar_frase_autorizacao(id_demanda)
     if resposta_confirmacao.strip() != frase_esperada:
@@ -94,3 +95,6 @@ def gravar_spec_tecnica(
         )
     html_final = html if html is not None else converter_para_html(spec_md)
     cliente.gravar_campo(id_demanda, campo, html_final)
+    cliente.anexar_arquivo(id_demanda, "spec.md", spec_md.encode("utf-8"))
+    if backlog_md is not None:
+        cliente.anexar_arquivo(id_demanda, "backlog.md", backlog_md.encode("utf-8"))
