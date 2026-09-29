@@ -14,8 +14,12 @@ Negócio via `Custom.DemandaSpecTecnica`.
 
 ## Fluxo obrigatório
 
-1. Receba o caminho da pasta `DN-<id>-<slug>/` (ou o ID da Demanda, resolvendo a pasta pela
-   convenção de nomes do `gerador-hu`) e o ID da Demanda no Azure Boards.
+1. Receba o ID da Demanda no Azure Boards. Rode `resolver-spec --demanda <id> --raiz <raiz do
+   repositório atualmente aberto>`: ele procura `docs/specs/DN-<id>-*/` sob essa raiz e, se não
+   encontrar, baixa `spec.md`/`backlog.md` do anexo mais recente da própria Demanda e materializa
+   uma pasta local a partir deles. Use o caminho impresso em `stdout` nos passos seguintes. Se a
+   CLI recusar (nem pasta local, nem anexo), pare e informe que a Demanda ainda não tem spec
+   publicada — não peça o caminho manualmente, nem sugira rodar `gerador-hu` você mesmo.
 2. Rode `ler-lacunas spec.md` para isolar as lacunas técnicas (e as sem rótulo, que entram em toda
    rodada). Conduza a entrevista em rodadas, no mesmo mecanismo de fronteira do
    `entrevistar-lacunas-requisito`: pergunte os itens que não dependem de resposta ainda em aberto,
