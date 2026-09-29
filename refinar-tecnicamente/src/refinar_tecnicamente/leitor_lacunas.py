@@ -36,6 +36,13 @@ Perfil = Literal["fullstack", "mobile", "ambos"]
 _CAMINHO_ENTRE_CRASES = re.compile(r"`([^`]+)`")
 
 
+def _parece_caminho(texto: str) -> bool:
+    """Verifica se o texto parece um caminho de repositório (ex.: 'repo/arquivo' ou
+    'repo/arquivo:linha'). Exclui texto livre sem '/' para não classificar evidências
+    como "Nenhuma referência" ou "Ver código" como caminhos."""
+    return re.match(r"\S+/\S+", texto) is not None
+
+
 def _e_caminho_mobile(caminho: str) -> bool:
     """O primeiro segmento do caminho (antes de '/') é o nome do repositório; 'mobile' como
     substring nele, case-insensitive, é a convenção observada nos repositórios reais
@@ -46,16 +53,21 @@ def _e_caminho_mobile(caminho: str) -> bool:
 
 
 def perfil_da_lacuna(lacuna: Lacuna) -> Perfil:
-    """Classifica pelos caminhos citados entre crases na pergunta e na evidência, juntos. Sem
-    caminho nenhum, ou caminhos dos dois tipos ao mesmo tempo (mesmo campo ou campos
-    diferentes), o resultado é 'ambos' — nunca esconde uma pergunta por excesso de precisão da
-    heurística."""
+    """Classifica pelos caminhos citados entre crases na pergunta e na evidência, juntos.
+    A evidência sem crases é interpretada como caminho direto apenas se parecer um caminho
+    (padrão \\S+/\\S+); texto livre sem "/" (ex.: "Nenhuma referência") não contribui.
+    Sem caminho nenhum, ou caminhos dos dois tipos ao mesmo tempo (mesmo campo ou campos
+    diferentes), o resultado é 'ambos' — nunca esconde uma pergunta por excesso de precisão."""
     texto = lacuna.pergunta + " " + (lacuna.evidencia or "")
     caminhos = _CAMINHO_ENTRE_CRASES.findall(texto)
 
-    # Se a evidência não estiver vazia e não tiver caminhos entre crases,
+    # Se a evidência não estiver vazia, não tiver caminhos entre crases e parecer um caminho,
     # interpretá-la como um caminho direto
-    if lacuna.evidencia and not _CAMINHO_ENTRE_CRASES.search(lacuna.evidencia):
+    if (
+        lacuna.evidencia
+        and not _CAMINHO_ENTRE_CRASES.search(lacuna.evidencia)
+        and _parece_caminho(lacuna.evidencia)
+    ):
         caminhos.append(lacuna.evidencia)
 
     if not caminhos:

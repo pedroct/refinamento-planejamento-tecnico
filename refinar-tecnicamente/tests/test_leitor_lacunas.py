@@ -207,3 +207,27 @@ def test_filtrar_tecnicas_sem_perfil_preserva_comportamento_atual() -> None:
     lacunas = ler_lacunas(_SPEC_MISTA)
     assert [lacuna.id for lacuna in filtrar_tecnicas(lacunas)] == ["T1", "T2", "T3"]
     assert [lacuna.id for lacuna in filtrar_tecnicas(lacunas, perfil=None)] == ["T1", "T2", "T3"]
+
+
+def test_perfil_da_lacuna_evidencia_texto_livre_sem_caminho() -> None:
+    """Texto livre sem '/' na evidência não contribui com caminho, mesmo que tenha palavras.
+    Sem caminho nenhum, resultado é 'ambos'."""
+    lacuna = _lacuna("Qual a granularidade?", evidencia="Nenhuma referência encontrada no código")
+    assert perfil_da_lacuna(lacuna) == "ambos"
+
+
+def test_perfil_da_lacuna_evidencia_contendo_mobile_mas_sem_caminho() -> None:
+    """Texto livre contendo a palavra 'mobile' mas sem padrão de caminho não classifica como
+    mobile; é ignorado pois não é um caminho de verdade."""
+    lacuna = _lacuna("Pergunta.", evidencia="Ver documentação mobile no README")
+    assert perfil_da_lacuna(lacuna) == "ambos"
+
+
+def test_perfil_da_lacuna_evidencia_texto_com_pergunta_caminho_mobile() -> None:
+    """Mesmo que a evidência seja texto livre, se a pergunta tiver um caminho mobile,
+    a classificação é mobile."""
+    lacuna = _lacuna(
+        "Fazer isso? Ver `diligencia-mobile/lib/x.dart:5`.",
+        evidencia="Sem referência no repositório",
+    )
+    assert perfil_da_lacuna(lacuna) == "mobile"
