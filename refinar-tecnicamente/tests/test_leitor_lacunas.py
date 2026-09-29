@@ -5,6 +5,7 @@ from refinar_tecnicamente.leitor_lacunas import (
     Lacuna,
     filtrar_tecnicas,
     ler_lacunas,
+    perfil_da_lacuna,
 )
 
 SPEC_COM_ROTULOS = """# Spec
@@ -118,3 +119,59 @@ def test_lacuna_ambigua_dash_errado() -> None:
 """
     with pytest.raises(ErroLacunaAmbigua):
         ler_lacunas(spec)
+
+
+def _lacuna(pergunta: str, evidencia: str | None = None) -> Lacuna:
+    return Lacuna(id="T1", audiencia="Técnico", pergunta=pergunta, evidencia=evidencia)
+
+
+def test_perfil_da_lacuna_so_caminho_mobile_na_pergunta() -> None:
+    lacuna = _lacuna(
+        "O app deve exibir o novo campo? Ver `diligencia-mobile/lib/data/models/x.dart:10`."
+    )
+    assert perfil_da_lacuna(lacuna) == "mobile"
+
+
+def test_perfil_da_lacuna_so_caminho_nao_mobile_na_pergunta() -> None:
+    lacuna = _lacuna(
+        "O filtro deve considerar isso? Ver `diligencia-api/src/main/java/Servico.java:20`."
+    )
+    assert perfil_da_lacuna(lacuna) == "fullstack"
+
+
+def test_perfil_da_lacuna_caminhos_mistos_na_pergunta() -> None:
+    lacuna = _lacuna(
+        "Os dois lados precisam mudar? Ver `diligencia-api/Servico.java:20` e "
+        "`diligencia-mobile/lib/x.dart:5`."
+    )
+    assert perfil_da_lacuna(lacuna) == "ambos"
+
+
+def test_perfil_da_lacuna_sem_nenhum_caminho() -> None:
+    lacuna = _lacuna("Qual a granularidade do acesso a órgãos inativos?")
+    assert perfil_da_lacuna(lacuna) == "ambos"
+
+
+def test_perfil_da_lacuna_usa_evidencia_estruturada() -> None:
+    lacuna = _lacuna(
+        "O prazo persiste como enum?", evidencia="diligencia-mobile/lib/data/x.dart:12"
+    )
+    assert perfil_da_lacuna(lacuna) == "mobile"
+
+
+def test_perfil_da_lacuna_mistura_entre_pergunta_e_evidencia() -> None:
+    """Um caminho mobile na pergunta e um não-mobile só na evidência (ou vice-versa) também
+    conta como mistura — a classificação olha os dois campos juntos, não cada um isolado."""
+    lacuna = _lacuna(
+        "Isso afeta os dois lados? Ver `diligencia-mobile/lib/x.dart:5`.",
+        evidencia="diligencia-api/Servico.java:20",
+    )
+    assert perfil_da_lacuna(lacuna) == "ambos"
+
+
+def test_perfil_da_lacuna_repositorio_com_mobile_como_substring() -> None:
+    """A heurística é substring simples, documentada como limitação conhecida — um repositório
+    hipotético cujo nome contenha 'mobile' sem ser o app mobile de verdade também classificaria
+    como mobile. Este teste fixa o comportamento documentado, não uma falha a corrigir aqui."""
+    lacuna = _lacuna("Pergunta qualquer. Ver `algo-mobile-legado/arquivo.py:1`.")
+    assert perfil_da_lacuna(lacuna) == "mobile"

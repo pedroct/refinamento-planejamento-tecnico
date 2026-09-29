@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import Literal
 
 _TITULO_SECAO = "## Lacunas e perguntas abertas"
 _ITEM_ROTULADO = re.compile(
@@ -30,6 +31,41 @@ class Lacuna:
     evidencia: str | None
 
 
+Perfil = Literal["fullstack", "mobile", "ambos"]
+
+_CAMINHO_ENTRE_CRASES = re.compile(r"`([^`]+)`")
+
+
+def _e_caminho_mobile(caminho: str) -> bool:
+    """O primeiro segmento do caminho (antes de '/') é o nome do repositório; 'mobile' como
+    substring nele, case-insensitive, é a convenção observada nos repositórios reais
+    (`diligencia-mobile`). Limitação conhecida e aceita: um repositório cujo nome contenha
+    'mobile' sem ser o app mobile também classificaria como mobile."""
+    repositorio = caminho.split("/", 1)[0]
+    return "mobile" in repositorio.lower()
+
+
+def perfil_da_lacuna(lacuna: Lacuna) -> Perfil:
+    """Classifica pelos caminhos citados entre crases na pergunta e na evidência, juntos. Sem
+    caminho nenhum, ou caminhos dos dois tipos ao mesmo tempo (mesmo campo ou campos
+    diferentes), o resultado é 'ambos' — nunca esconde uma pergunta por excesso de precisão da
+    heurística."""
+    texto = lacuna.pergunta + " " + (lacuna.evidencia or "")
+    caminhos = _CAMINHO_ENTRE_CRASES.findall(texto)
+
+    # Se a evidência não estiver vazia e não tiver caminhos entre crases,
+    # interpretá-la como um caminho direto
+    if lacuna.evidencia and not _CAMINHO_ENTRE_CRASES.search(lacuna.evidencia):
+        caminhos.append(lacuna.evidencia)
+
+    if not caminhos:
+        return "ambos"
+    classificacoes = {_e_caminho_mobile(caminho) for caminho in caminhos}
+    if len(classificacoes) > 1:
+        return "ambos"
+    return "mobile" if classificacoes.pop() else "fullstack"
+
+
 def _corpo_secao_lacunas(spec_md: str) -> str | None:
     """Isola o corpo de `## Lacunas e perguntas abertas`, até a próxima seção ou o fim.
 
@@ -53,9 +89,7 @@ def _corpo_secao_lacunas(spec_md: str) -> str | None:
     return "\n".join(corpo)
 
 
-def _fechar_pendente(
-    lacunas: list[Lacuna], pendente: dict[str, str | None] | None
-) -> None:
+def _fechar_pendente(lacunas: list[Lacuna], pendente: dict[str, str | None] | None) -> None:
     if pendente is not None:
         lacunas.append(Lacuna(**pendente))  # type: ignore[arg-type]
 
@@ -79,9 +113,7 @@ def ler_lacunas(spec_md: str) -> list[Lacuna]:
             }
             continue
         if _ITEM_AMBIGUO.match(linha):
-            raise ErroLacunaAmbigua(
-                f"Lacuna parece rotulada mas não segue o padrão exato: {linha}"
-            )
+            raise ErroLacunaAmbigua(f"Lacuna parece rotulada mas não segue o padrão exato: {linha}")
         evidencia = _EVIDENCIA.match(linha)
         if evidencia and pendente is not None:
             pendente["evidencia"] = evidencia.group("evidencia").strip()
