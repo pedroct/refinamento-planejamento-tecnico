@@ -166,3 +166,66 @@ def test_anexar_arquivo_com_upload_ok_e_vinculo_falho_nao_retenta_nenhum_dos_doi
     with _cliente(httpx.MockTransport(handler)) as cliente, pytest.raises(ErroFalhaTransitoria):
         cliente.anexar_arquivo(5, "spec.md", b"conteudo")
     assert chamadas == ["POST", "PATCH"]
+
+
+def test_baixar_anexo_sem_nenhum_anexo_devolve_none() -> None:
+    handler = httpx.MockTransport(
+        lambda _req: httpx.Response(200, json={"id": 5, "fields": {}, "relations": []})
+    )
+    with _cliente(handler) as cliente:
+        assert cliente.baixar_anexo(5, "spec.md") is None
+
+
+def test_baixar_anexo_devolve_conteudo_do_anexo_existente() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "attachments/abc" in str(request.url):
+            return httpx.Response(200, content=b"# Spec\n")
+        return httpx.Response(
+            200,
+            json={
+                "id": 5,
+                "fields": {},
+                "relations": [
+                    {
+                        "rel": "AttachedFile",
+                        "url": "https://dev.azure.com/anexo/attachments/abc",
+                        "attributes": {"comment": "spec.md"},
+                    }
+                ],
+            },
+        )
+
+    with _cliente(httpx.MockTransport(handler)) as cliente:
+        conteudo = cliente.baixar_anexo(5, "spec.md")
+    assert conteudo == b"# Spec\n"
+
+
+def test_baixar_anexo_com_varios_do_mesmo_nome_pega_o_ultimo() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "attachments/novo" in str(request.url):
+            return httpx.Response(200, content=b"versao nova")
+        if "attachments/velho" in str(request.url):
+            return httpx.Response(200, content=b"versao velha")
+        return httpx.Response(
+            200,
+            json={
+                "id": 5,
+                "fields": {},
+                "relations": [
+                    {
+                        "rel": "AttachedFile",
+                        "url": "https://dev.azure.com/anexo/attachments/velho",
+                        "attributes": {"comment": "spec.md"},
+                    },
+                    {
+                        "rel": "AttachedFile",
+                        "url": "https://dev.azure.com/anexo/attachments/novo",
+                        "attributes": {"comment": "spec.md"},
+                    },
+                ],
+            },
+        )
+
+    with _cliente(httpx.MockTransport(handler)) as cliente:
+        conteudo = cliente.baixar_anexo(5, "spec.md")
+    assert conteudo == b"versao nova"
