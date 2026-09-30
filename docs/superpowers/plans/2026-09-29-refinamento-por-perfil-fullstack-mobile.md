@@ -16,6 +16,46 @@ parâmetro opcional em `filtrar_tecnicas`; `cli.py` expõe isso via `--perfil` e
 
 **Spec:** `docs/superpowers/specs/2026-09-29-refinamento-por-perfil-fullstack-mobile-design.md`
 
+## Status da execução
+
+**Concluído em 2026-09-29** — Tasks 1 a 5 executadas e revisadas; 139 testes em `refinar-tecnicamente`,
+`ruff` e `mypy` limpos. Branch `feat/refinamento-por-perfil`.
+
+| Task | Commits | Observação |
+|---|---|---|
+| 1 — `perfil_da_lacuna` | `deb0e7b`, `4b03202`, `feb0702` | 2 rodadas de correção (ver abaixo) |
+| 2 — `filtrar_tecnicas` | `b347a0c` | |
+| 3 — CLI `--perfil` | `ff29d70` | |
+| 4 — `SKILL.md` | `e91b0bd` | |
+| 5 — testes do `SKILL.md` | `597a59d` | testes ficaram em `tests/test_cli.py` (não havia suíte de integração) |
+
+**Desvios do plano decididos na execução**
+
+- **Task 1 — evidência sem crases:** o plano tratava a evidência inteira como um caminho. Ela passou a
+  ser separada em tokens (espaço, vírgula, ponto-e-vírgula) e só token com forma de caminho conta;
+  `n/a` e `e/ou` ficam de fora.
+- **Task 3 — `--perfil` inválido:** o teste do plano esperava `executar(...) == 2`, mas o `argparse`
+  levanta `SystemExit(2)` antes; o teste usa `pytest.raises(SystemExit)`.
+- **Task 1 — import:** `perfil_da_lacuna` importado no topo do arquivo de teste (evita E402).
+- **Reformatação:** o `ruff format` reformatou trechos antigos de `leitor_lacunas.py`, `cli.py` e
+  `test_cli.py`; a base já não passava no `format --check`.
+
+**Tasks adicionais** (fora do plano original, achadas na revisão final e depois)
+
+- [x] **Task 6 — heurística de perfil só erra para "ambos"** (`c40b394`, `ec16eae`): só token com `/`,
+  sem `://`, sem espaço e com `-` no primeiro segmento conta como caminho; identificadores entre
+  crases (`` `PENDENTE` ``), `Arquivo.java:75`, comandos como `` `git diff a-b/c` `` e prosa como
+  "API/Web" não classificam. `PerfilFiltro = Literal["fullstack", "mobile"]` corrige o `mypy` strict.
+- [x] **Task 7 — `resolver-spec --forcar-remoto`** (`7e1fdb5`, `6ac93ec`): a segunda chamada de
+  `resolver-spec` nunca baixava o anexo (a pasta local existia), então a subseção do outro perfil
+  podia ser apagada. A flag baixa o anexo para `DN-<id>-<slug>.remoto/`, sem tocar na local; a pasta
+  herda o nome da local e `docs/specs/*.remoto/` está no `.gitignore`.
+- [x] **Task 8 — `SKILL.md` em 8 passos, com testes de ordem** (`2754c95`, `146a347`): perguntar o
+  perfil e buscar a versão remota viraram passos próprios; `description` e "Objetivo" mencionam o
+  perfil; os testes conferem numeração, ordem e referências entre passos.
+- [x] **Task 9 — READMEs** (`8f24e11`): raiz e `refinar-tecnicamente` atualizados; contagem de testes
+  corrigida (241 no total).
+
 ## Global Constraints
 
 - Conteúdo criado em português brasileiro.
@@ -54,7 +94,7 @@ parâmetro opcional em `filtrar_tecnicas`; `cli.py` expõe isso via `--perfil` e
   - `Perfil = Literal["fullstack", "mobile", "ambos"]`
   - `perfil_da_lacuna(lacuna: Lacuna) -> Perfil`
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 Adicione ao final de `tests/test_leitor_lacunas.py`:
 
@@ -118,12 +158,12 @@ def test_perfil_da_lacuna_repositorio_com_mobile_como_substring() -> None:
     assert perfil_da_lacuna(lacuna) == "mobile"
 ```
 
-- [ ] **Step 2: Rodar os testes e confirmar que falham**
+- [x] **Step 2: Rodar os testes e confirmar que falham**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_leitor_lacunas.py -k perfil_da_lacuna -v`
 Expected: FAIL — `ImportError: cannot import name 'perfil_da_lacuna'`
 
-- [ ] **Step 3: Implementar**
+- [x] **Step 3: Implementar**
 
 Em `leitor_lacunas.py`, adicione os imports e a função (após a definição de `Lacuna`, antes de
 `_corpo_secao_lacunas`):
@@ -163,12 +203,12 @@ def perfil_da_lacuna(lacuna: Lacuna) -> Perfil:
 Adicione `from typing import Literal` junto aos imports do topo do arquivo (ou ajuste o `import` já
 existente, se houver) e mantenha `import re` já presente.
 
-- [ ] **Step 4: Rodar os testes e confirmar que passam**
+- [x] **Step 4: Rodar os testes e confirmar que passam**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_leitor_lacunas.py -v`
 Expected: PASS (todos, incluindo os já existentes — sem regressão)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd refinar-tecnicamente
@@ -190,7 +230,7 @@ git commit -m "feat(refinar-tecnicamente): classificar lacuna técnica por perfi
   (assinatura estendida — compatível com todo código que já chama `filtrar_tecnicas(lacunas)` sem o
   novo parâmetro).
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 Adicione ao final de `tests/test_leitor_lacunas.py`:
 
@@ -227,12 +267,12 @@ def test_filtrar_tecnicas_sem_perfil_preserva_comportamento_atual() -> None:
     assert [lacuna.id for lacuna in filtrar_tecnicas(lacunas, perfil=None)] == ["T1", "T2", "T3"]
 ```
 
-- [ ] **Step 2: Rodar os testes e confirmar que falham**
+- [x] **Step 2: Rodar os testes e confirmar que falham**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_leitor_lacunas.py -k filtrar_tecnicas_por_perfil -v`
 Expected: FAIL — `TypeError: filtrar_tecnicas() got an unexpected keyword argument 'perfil'`
 
-- [ ] **Step 3: Implementar**
+- [x] **Step 3: Implementar**
 
 Troque a função `filtrar_tecnicas` existente por:
 
@@ -251,12 +291,12 @@ def filtrar_tecnicas(lacunas: list[Lacuna], perfil: Perfil | None = None) -> lis
     ]
 ```
 
-- [ ] **Step 4: Rodar os testes e confirmar que passam**
+- [x] **Step 4: Rodar os testes e confirmar que passam**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_leitor_lacunas.py -v`
 Expected: PASS (todos)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd refinar-tecnicamente
@@ -276,7 +316,7 @@ git commit -m "feat(refinar-tecnicamente): filtrar lacunas técnicas por perfil 
 - Consumes: `filtrar_tecnicas(lacunas, perfil=...)` (Task 2).
 - Produces: nenhuma interface nova — só expõe `--perfil` no subcomando `ler-lacunas` já existente.
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 Adicione a `tests/test_cli.py`, próximo aos testes de `ler-lacunas` já existentes:
 
@@ -329,14 +369,14 @@ def test_ler_lacunas_sem_perfil_continua_sem_filtro(tmp_path: Path, capsys: obje
     assert [lacuna["id"] for lacuna in lacunas] == ["T1", "T2"]
 ```
 
-- [ ] **Step 2: Rodar os testes e confirmar que falham**
+- [x] **Step 2: Rodar os testes e confirmar que falham**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_cli.py -k "ler_lacunas_com_perfil or ler_lacunas_sem_perfil" -v`
 Expected: FAIL — `SystemExit` inesperado (argparse não reconhece `--perfil`) nos dois primeiros, e o
 terceiro passa por acidente (mas roda antes de `--perfil` existir); rode de novo depois do Step 3 para
 confirmar os quatro.
 
-- [ ] **Step 3: Implementar**
+- [x] **Step 3: Implementar**
 
 Em `cli.py`, altere a definição do subparser `ler-lacunas`:
 
@@ -365,17 +405,17 @@ def _ler_lacunas(caminho_spec: str, perfil: str | None = None) -> int:
 (A linha seguinte, que já monta o `json.dumps(...)` a partir de `lacunas`, permanece igual — só a
 origem de `lacunas` muda.)
 
-- [ ] **Step 4: Rodar os testes e confirmar que passam**
+- [x] **Step 4: Rodar os testes e confirmar que passam**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests/test_cli.py -v`
 Expected: PASS (todos, incluindo os já existentes de `ler-lacunas` sem `--perfil`)
 
-- [ ] **Step 5: Rodar a suíte completa da skill**
+- [x] **Step 5: Rodar a suíte completa da skill**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests -v`
 Expected: PASS (todos)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd refinar-tecnicamente
@@ -394,7 +434,7 @@ git commit -m "feat(refinar-tecnicamente): expor --perfil em ler-lacunas"
 - Consumes: `ler-lacunas --perfil` (Task 3).
 - Produces: instrução atualizada para o agente que conduz o refinamento.
 
-- [ ] **Step 1: Reescrever os passos 1-3 do "Fluxo obrigatório"**
+- [x] **Step 1: Reescrever os passos 1-3 do "Fluxo obrigatório"**
 
 Troque:
 
@@ -455,12 +495,12 @@ Por:
    `caminho:linha` para cada afirmação, na mesma disciplina do resto da spec.
 ```
 
-- [ ] **Step 2: Conferir a mudança**
+- [x] **Step 2: Conferir a mudança**
 
 Run: `grep -n "qual o perfil\|Escopo Fullstack\|Escopo Mobile\|--perfil" refinar-tecnicamente/SKILL.md`
 Expected: mostra as três ocorrências novas dentro do "Fluxo obrigatório"
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 cd refinar-tecnicamente
@@ -482,7 +522,7 @@ git commit -m "docs(refinar-tecnicamente): sessão de refinamento técnico por p
 - Produces: nenhuma interface nova — só fecha a cobertura de texto do `SKILL.md`, no mesmo padrão
   já usado por `entrevistar-lacunas-requisito/tests/test_skill_integration.py`.
 
-- [ ] **Step 1: Verificar se já existe suíte de integração do SKILL.md nesta skill**
+- [x] **Step 1: Verificar se já existe suíte de integração do SKILL.md nesta skill**
 
 Run: `ls refinar-tecnicamente/tests/test_skill_integration.py`
 
@@ -491,7 +531,7 @@ Se o arquivo **não existir**, esta task só adiciona três asserções pontuais
 desproporcional ao restante da mudança). Se **existir**, siga os steps abaixo apontando para esse
 arquivo em vez de `test_cli.py`.
 
-- [ ] **Step 2: Escrever os testes que falham**
+- [x] **Step 2: Escrever os testes que falham**
 
 ```python
 _SKILL_MD = Path(__file__).resolve().parents[1] / "SKILL.md"
@@ -517,18 +557,18 @@ def test_skill_md_documenta_buscar_versao_mais_recente_antes_de_escrever() -> No
 `Path(__file__).resolve().parents[1]` a partir de `tests/test_cli.py` resolve para a raiz de
 `refinar-tecnicamente/` — onde `SKILL.md` já vive, ao lado de `tests/` e `src/`.
 
-- [ ] **Step 3: Rodar os testes e confirmar que falham**
+- [x] **Step 3: Rodar os testes e confirmar que falham**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests -k skill_md -v`
 Expected: FAIL antes da Task 4 rodar; se a Task 4 já rodou, PASS de primeira — nesse caso, confirme
 lendo o `SKILL.md` para garantir que as três frases realmente batem literalmente, e siga.
 
-- [ ] **Step 4: Rodar a suíte completa da skill**
+- [x] **Step 4: Rodar a suíte completa da skill**
 
 Run: `cd refinar-tecnicamente && uv run pytest tests -v`
 Expected: PASS (todos)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd refinar-tecnicamente
