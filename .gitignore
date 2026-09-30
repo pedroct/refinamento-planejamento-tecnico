@@ -11,3 +11,5 @@ __pycache__/
 coverage.xml
 .vscode/settings.json
 .worktrees/
+# cópias remotas de spec baixadas por `resolver-spec --forcar-remoto`
+docs/specs/*.remoto/

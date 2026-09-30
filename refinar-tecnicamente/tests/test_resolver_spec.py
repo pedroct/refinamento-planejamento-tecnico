@@ -147,6 +147,24 @@ def test_resolver_spec_remoto_baixa_para_pasta_irma_sem_tocar_na_local(tmp_path:
     assert (local / "spec.md").read_text(encoding="utf-8") == "# Local\n"
 
 
+def test_resolver_spec_remoto_herda_o_nome_da_local_mesmo_com_titulo_novo(tmp_path: Path) -> None:
+    """O título da Demanda mudou depois que a pasta local foi criada: a `.remoto` continua
+    pareada com a local, não com o slug do título atual."""
+    local = tmp_path / "docs" / "specs" / "DN-13959-titulo-antigo"
+    local.mkdir(parents=True)
+    (local / "spec.md").write_text("# Local\n", encoding="utf-8")
+    cliente = ClienteFalso({"spec.md": b"# Remoto\n"}, titulo="Título novo da Demanda")
+    destino = resolver_spec_remoto(cliente, raiz=tmp_path, id_demanda=13959)
+    assert destino == local.parent / "DN-13959-titulo-antigo.remoto"
+    assert not (local.parent / "DN-13959-titulo-novo-da-demanda.remoto").exists()
+
+
+def test_resolver_spec_remoto_sem_pasta_local_usa_o_slug_do_titulo(tmp_path: Path) -> None:
+    cliente = ClienteFalso({"spec.md": b"# Remoto\n"}, titulo="Título novo")
+    destino = resolver_spec_remoto(cliente, raiz=tmp_path, id_demanda=13959)
+    assert destino == tmp_path / "docs" / "specs" / "DN-13959-titulo-novo.remoto"
+
+
 def test_resolver_spec_remoto_sem_anexo_recusa_com_mensagem_clara(tmp_path: Path) -> None:
     with pytest.raises(ErroSpecNaoEncontrada, match="13959"):
         resolver_spec_remoto(ClienteFalso(), raiz=tmp_path, id_demanda=13959)

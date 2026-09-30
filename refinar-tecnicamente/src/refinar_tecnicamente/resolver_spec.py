@@ -82,12 +82,28 @@ def resolver_spec_remoto(cliente: _ClienteLeitura, *, raiz: Path, id_demanda: in
     """Baixa o anexo mais recente da Demanda para uma pasta IRMÃ da local
     (`docs/specs/DN-<id>-<slug>.remoto/`), ignorando a pasta local existente. Serve para ler o
     que outra sessão (outro perfil) publicou sem sobrescrever o trabalho local. A pasta remota
-    é regravada a cada chamada; a local nunca é tocada."""
-    return _baixar_e_materializar(cliente, raiz=raiz, id_demanda=id_demanda, sufixo=_SUFIXO_REMOTO)
+    é regravada a cada chamada; a local nunca é tocada.
+
+    Quando a pasta local existe, a `.remoto` herda o nome dela (`<nome local>.remoto`), para as
+    duas ficarem sempre pareadas mesmo que o título da Demanda tenha mudado desde que a local
+    foi criada. Sem pasta local, o nome sai do título atual, como em `resolver_spec`."""
+    local = localizar_pasta_local(raiz, id_demanda)
+    return _baixar_e_materializar(
+        cliente,
+        raiz=raiz,
+        id_demanda=id_demanda,
+        sufixo=_SUFIXO_REMOTO,
+        nome_base=local.name if local is not None else None,
+    )
 
 
 def _baixar_e_materializar(
-    cliente: _ClienteLeitura, *, raiz: Path, id_demanda: int, sufixo: str
+    cliente: _ClienteLeitura,
+    *,
+    raiz: Path,
+    id_demanda: int,
+    sufixo: str,
+    nome_base: str | None = None,
 ) -> Path:
     spec_bytes = cliente.baixar_anexo(id_demanda, "spec.md")
     if spec_bytes is None:
@@ -104,10 +120,12 @@ def _baixar_e_materializar(
     # backlog nem avisar ninguém. Por isso todos os downloads acontecem antes de criar a
     # pasta ou gravar qualquer arquivo.
     backlog_bytes = cliente.baixar_anexo(id_demanda, "backlog.md")
-    work_item = cliente.ler_work_item(id_demanda)
-    campos = work_item.get("fields")
-    titulo = campos.get("System.Title", "") if isinstance(campos, dict) else ""
-    nome_pasta = montar_nome_pasta(id_demanda, titulo if isinstance(titulo, str) else "")
+    if nome_base is None:
+        work_item = cliente.ler_work_item(id_demanda)
+        campos = work_item.get("fields")
+        titulo = campos.get("System.Title", "") if isinstance(campos, dict) else ""
+        nome_base = montar_nome_pasta(id_demanda, titulo if isinstance(titulo, str) else "")
+    nome_pasta = nome_base
     destino = raiz / "docs" / "specs" / f"{nome_pasta}{sufixo}"
     destino.mkdir(parents=True, exist_ok=True)
     (destino / "spec.md").write_bytes(spec_bytes)
