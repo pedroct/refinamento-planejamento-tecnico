@@ -299,3 +299,17 @@ def test_perfil_da_lacuna_identificador_nao_mascara_caminho_real() -> None:
     """O identificador entre crases é ignorado; o caminho real ainda classifica."""
     lacuna = _lacuna("O `PENDENTE` muda? Ver `diligencia-mobile/lib/x.dart:5`.")
     assert perfil_da_lacuna(lacuna) == "mobile"
+
+
+def test_perfil_da_lacuna_comando_entre_crases_nao_conta_como_caminho() -> None:
+    """`git diff a-b/c` é um comando com espaço, não um caminho: não pode virar o repositório
+    `git diff a-b` e esconder a pergunta do perfil mobile."""
+    lacuna = _lacuna("Como conferir a mudança? Rode `git diff a-b/c` e compare.")
+    assert perfil_da_lacuna(lacuna) == "ambos"
+
+
+def test_perfil_da_lacuna_comando_entre_crases_nao_mascara_caminho_real() -> None:
+    lacuna = _lacuna(
+        "Rode `git diff a-api/c` e veja `diligencia-mobile/lib/x.dart:5`.",
+    )
+    assert perfil_da_lacuna(lacuna) == "mobile"

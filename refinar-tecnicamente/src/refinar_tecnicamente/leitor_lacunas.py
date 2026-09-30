@@ -41,10 +41,14 @@ def _repositorio_do_caminho(token: str) -> str | None:
     """Devolve o nome do repositório se o token tem forma de caminho `repo/arquivo[:linha]`;
     senão `None`. Só conta como caminho um token que contém '/', não é URL (sem '://') e cujo
     primeiro segmento — o nome do repositório — contém '-' (ex.: `diligencia-api`,
-    `diligencia-mobile`). Identificadores (`PENDENTE`, `Custom.Campo`, `Arquivo.java:75`),
+    `diligencia-mobile`). Um token com espaço (ex.: um comando entre crases, como
+    `git diff a-b/c`) também não conta: caminho é uma palavra só.
+    Identificadores (`PENDENTE`, `Custom.Campo`, `Arquivo.java:75`),
     prosa como "API/Web" e "n/a"/"e/ou" não têm essa forma e não contribuem."""
     token = token.strip().rstrip(".,;:!?)")
     if "/" not in token or "://" in token or token.lower() in ("n/a", "e/ou"):
+        return None
+    if re.search(r"\s", token):
         return None
     repositorio = token.split("/", 1)[0]
     return repositorio if "-" in repositorio else None
