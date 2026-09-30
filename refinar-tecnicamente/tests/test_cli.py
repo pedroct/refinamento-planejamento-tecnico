@@ -1,5 +1,6 @@
 import argparse
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -471,10 +472,51 @@ def test_resolver_spec_forcar_remoto_sem_anexo_devolve_codigo_de_erro(
 _SKILL_MD = Path(__file__).resolve().parents[1] / "SKILL.md"
 
 
-def test_skill_md_pergunta_perfil_antes_de_ler_lacunas() -> None:
+def _passos_do_fluxo() -> dict[int, str]:
+    """Passos numerados do "Fluxo obrigatório" do SKILL.md, do número ao texto do passo."""
     texto = _SKILL_MD.read_text(encoding="utf-8")
-    assert "qual o perfil de quem está conduzindo esta sessão" in texto
-    assert "--perfil <fullstack|mobile>" in texto
+    fluxo = texto.split("## Fluxo obrigatório", 1)[1].split("\n## ", 1)[0]
+    partes = re.split(r"^(\d+)\. ", fluxo, flags=re.MULTILINE)
+    return {int(numero): corpo for numero, corpo in zip(partes[1::2], partes[2::2], strict=True)}
+
+
+def _numero_do_passo(trecho: str) -> int:
+    """Número do único passo que contém `trecho`; falha se ele aparecer em zero ou mais de um."""
+    numeros = [numero for numero, corpo in _passos_do_fluxo().items() if trecho in corpo]
+    assert len(numeros) == 1, f"{trecho!r} deveria estar em exatamente um passo, está em {numeros}"
+    return numeros[0]
+
+
+def test_skill_md_passos_do_fluxo_sao_numerados_em_sequencia() -> None:
+    numeros = list(_passos_do_fluxo())
+    assert numeros == list(range(1, len(numeros) + 1))
+
+
+def test_skill_md_ordem_dos_passos_do_fluxo() -> None:
+    """Resolver a spec -> perguntar o perfil -> ler lacunas do perfil -> buscar a versão remota
+    -> escrever a subseção -> Story Points -> gravar. Cada marcador vive em um só passo."""
+    ordem = [
+        _numero_do_passo("resolver-spec --demanda <id> --raiz <raiz do"),
+        _numero_do_passo("qual o perfil de quem está conduzindo esta sessão"),
+        _numero_do_passo("ler-lacunas spec.md --perfil <fullstack|mobile>"),
+        _numero_do_passo("--forcar-remoto"),
+        _numero_do_passo("### Escopo Fullstack (API/Web)"),
+        _numero_do_passo("sugerir-story-points"),
+        _numero_do_passo("gravar-spec-tecnica"),
+    ]
+    assert ordem == sorted(ordem)
+    assert len(set(ordem)) == len(ordem)
+
+
+def test_skill_md_passos_referenciam_os_numeros_certos() -> None:
+    """Os passos citam uns aos outros por número; renumerar sem atualizar quebra o fluxo."""
+    perguntar = _passos_do_fluxo()[_numero_do_passo("qual o perfil de quem está conduzindo")]
+    assert f"filtro do passo {_numero_do_passo('ler-lacunas spec.md')}" in perguntar
+    assert f"subseção do passo {_numero_do_passo('### Escopo Mobile')}" in perguntar
+    gravar = _passos_do_fluxo()[_numero_do_passo("gravar-spec-tecnica")]
+    inicio = _numero_do_passo("sugerir-story-points")
+    fim = _numero_do_passo("Grave os Story Points")
+    assert f"passos {inicio}-{fim}" in gravar
 
 
 def test_skill_md_documenta_as_duas_subsecoes_da_abordagem_tecnica() -> None:
@@ -483,17 +525,11 @@ def test_skill_md_documenta_as_duas_subsecoes_da_abordagem_tecnica() -> None:
     assert "### Escopo Mobile" in texto
 
 
-def test_skill_md_documenta_buscar_versao_mais_recente_antes_de_escrever() -> None:
-    texto = _SKILL_MD.read_text(encoding="utf-8")
-    assert "substituindo **só** a subseção do próprio perfil" in texto
+def test_skill_md_substitui_so_a_subsecao_do_proprio_perfil() -> None:
+    passo = _passos_do_fluxo()[_numero_do_passo("### Escopo Fullstack (API/Web)")]
+    assert "substituindo **só** a subseção do próprio perfil" in passo
 
 
-def test_skill_md_usa_forcar_remoto_para_buscar_o_outro_perfil() -> None:
-    texto = _SKILL_MD.read_text(encoding="utf-8")
-    assert "--forcar-remoto" in texto
-    assert "ainda não existir" in texto
-
-
-def test_skill_md_pergunta_perfil_antes_de_ler_as_lacunas() -> None:
-    texto = _SKILL_MD.read_text(encoding="utf-8")
-    assert "Antes de ler as lacunas, pergunte" in texto
+def test_skill_md_busca_o_outro_perfil_e_cobre_subsecao_inexistente() -> None:
+    passo = _passos_do_fluxo()[_numero_do_passo("--forcar-remoto")]
+    assert "ainda não existir" in passo
