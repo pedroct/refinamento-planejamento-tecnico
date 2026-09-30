@@ -16,8 +16,10 @@ gerador-hu (PO + negócio)
 refinamento-planejamento-tecnico
   refinar-tecnicamente        (reunião técnica)
     └─ resolve spec.md/backlog.md só pelo ID da Demanda (pasta local ou anexo remoto)
-       └─ fecha lacunas técnicas, registra abordagem, estima Story Points
-          └─ grava Custom.DemandaSpecTecnica e reanexa spec.md/backlog.md na Demanda
+       └─ uma sessão por perfil (fullstack ou mobile): fecha só as lacunas do perfil
+          e escreve só a subseção da abordagem técnica do perfil
+          └─ estima Story Points
+             └─ grava Custom.DemandaSpecTecnica e reanexa spec.md/backlog.md na Demanda
 
   decompor-tasks               (planning, por item, por quem executa)
     └─ decompõe em Tasks, estima horas, atribui a si, cria as Tasks
@@ -51,8 +53,16 @@ Na reunião técnica, sobre a `spec.md` de uma Demanda já publicada:
 - resolve `spec.md`/`backlog.md` só pelo ID da Demanda — usa a pasta local
   `docs/specs/DN-<id>-<slug>/` quando existe, ou baixa o anexo mais recente da própria Demanda e
   materializa a pasta, sem nunca pedir caminho manualmente;
-- fecha as lacunas rotuladas `Técnico` por entrevista, em rodadas;
-- investiga o código e registra a abordagem técnica como seção nova de `spec.md`;
+- pergunta o **perfil** de quem conduz a sessão — `fullstack` (backend + frontend web) ou `mobile` —
+  porque uma Demanda pode passar por duas sessões, uma por perfil, conduzidas por pessoas diferentes;
+- fecha por entrevista, em rodadas, as lacunas rotuladas `Técnico` **do próprio perfil**. Cada lacuna
+  é classificada pelo repositório dos caminhos `repo/arquivo` que cita (nome do repositório com
+  `mobile` = mobile); lacuna sem caminho, ou que cita os dois perfis, entra nas duas sessões — a
+  heurística só erra para o lado de mostrar a pergunta a mais, nunca de escondê-la;
+- investiga o código e registra a abordagem técnica em `## Abordagem técnica` de `spec.md`, com uma
+  subseção por perfil (`### Escopo Fullstack (API/Web)` e `### Escopo Mobile`). Cada sessão escreve
+  **só a sua**: antes de escrever, baixa a versão remota mais recente e copia intacta a subseção do
+  outro perfil, para uma sessão nunca apagar o trabalho da outra;
 - estima Story Points de cada História/Bug, ancorado em itens fechados comparáveis no mesmo Area
   Path — sem análogo, pergunta a quem está na reunião;
 - grava a spec atualizada (Markdown, sem conversão — o campo já é Markdown nativo no Azure Boards) em
@@ -64,15 +74,27 @@ Na reunião técnica, sobre a `spec.md` de uma Demanda já publicada:
 export $(grep -v '^#' refinar-tecnicamente/.env | xargs)
 uv run --directory refinar-tecnicamente refinar-tecnicamente resolver-spec \
   --demanda 13959 --raiz /caminho/absoluto/do/repositorio
-uv run --directory refinar-tecnicamente refinar-tecnicamente ler-lacunas /caminho/absoluto/para/spec.md
+uv run --directory refinar-tecnicamente refinar-tecnicamente resolver-spec \
+  --demanda 13959 --raiz /caminho/absoluto/do/repositorio --forcar-remoto
+uv run --directory refinar-tecnicamente refinar-tecnicamente ler-lacunas \
+  /caminho/absoluto/para/spec.md --perfil mobile
 uv run --directory refinar-tecnicamente refinar-tecnicamente sugerir-story-points \
   --area-path "Projeto\\Time A" --tipo "User Story" --tipo Bug
 uv run --directory refinar-tecnicamente refinar-tecnicamente gravar-spec-tecnica \
   --demanda 13959 --spec /caminho/absoluto/para/spec.md --backlog /caminho/absoluto/para/backlog.md
 ```
 
-`--backlog` é opcional em `gravar-spec-tecnica` — sem ele, o anexo remoto de `backlog.md` não é
-atualizado e os Story Points gravados ficam só na cópia local.
+Detalhes dos comandos:
+
+- `resolver-spec` sozinho devolve a pasta local quando ela existe e **nunca baixa nada**. Com
+  `--forcar-remoto`, baixa o anexo mais recente para uma pasta irmã `DN-<id>-<slug>.remoto/` sem
+  tocar na local (o caminho sai em `stdout`; sem anexo, recusa). É como uma sessão lê o que o outro
+  perfil publicou. A pasta `.remoto` herda o nome da local e está no `.gitignore`
+  (`docs/specs/*.remoto/`).
+- `ler-lacunas --perfil {fullstack,mobile}` filtra as lacunas técnicas pelo perfil; sem a flag, devolve
+  todas, como antes. Qualquer outro valor é recusado pelo `argparse` antes de ler o arquivo.
+- `gravar-spec-tecnica --backlog` é opcional — sem ele, o anexo remoto de `backlog.md` não é
+  atualizado e os Story Points gravados ficam só na cópia local.
 
 ### `decompor-tasks`
 
@@ -297,6 +319,12 @@ real de cada skill, já que cada uma tem seu próprio ambiente. `cliente_azure_d
 próprio arquivo), então essa duplicação entre elas é excluída do CPD (`sonar.cpd.exclusions` em
 `sonar-project.properties`): é arquitetural, não um defeito a corrigir.
 
+## Documentação de design
+
+Specs e planos de implementação de cada mudança ficam em `docs/superpowers/specs/` e
+`docs/superpowers/plans/`, com data no nome. O desenho da separação por perfil está em
+`docs/superpowers/specs/2026-09-29-refinamento-por-perfil-fullstack-mobile-design.md`.
+
 ## Pré-requisitos
 
 - `gerador-hu` publicado e configurado, com uma spec (`spec.md`) já gerada para a Demanda.
@@ -307,14 +335,18 @@ próprio arquivo), então essa duplicação entre elas é excluída do CPD (`son
 
 ## Estado do projeto
 
-As três skills estão implementadas e testadas (199 testes no total, um pacote por skill —
-`decompor-tasks` e `refinar-tecnicamente` em 100% de cobertura, `preparar-implementacao` em 99%,
-com uma única linha estruturalmente inalcançável). Lacunas conhecidas em relação à spec original,
+As três skills estão implementadas e testadas (241 testes no total, um pacote por skill —
+`refinar-tecnicamente` 139, `decompor-tasks` 54, `preparar-implementacao` 48; os dois primeiros em
+100% de cobertura, `preparar-implementacao` em 99%, com uma única linha estruturalmente
+inalcançável). Lacunas conhecidas em relação à spec original,
 ainda não implementadas:
 
 - `decompor-tasks` não tem comando de CLI para subir até a Demanda nem para consultar o usuário
   autenticado do PAT (`usuario_autenticado()` existe no cliente, mas não é exposto).
 - Nenhum pacote lê `.env` automaticamente nem pede o PAT interativamente sem eco — a configuração
   hoje depende de variáveis de ambiente já exportadas no shell.
+- A heurística de perfil do `refinar-tecnicamente` só reconhece repositórios cujo nome tem hífen
+  (`diligencia-api`, `diligencia-mobile`) e usa "mobile" como substring do nome; caminhos fora desse
+  formato não classificam e a lacuna aparece nas duas sessões.
 - A sugestão de Story Points não compara item a item — devolve a mesma mediana do Area Path para
   toda História/Bug do backlog.

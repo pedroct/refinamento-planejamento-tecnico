@@ -5,6 +5,11 @@ Skill de refinamento técnico: fecha as lacunas técnicas de uma spec já produz
 Story Points ancorados em itens fechados comparáveis, gravando o resultado em
 `Custom.DemandaSpecTecnica` na Demanda de Negócio.
 
+A sessão roda **por perfil** (`fullstack` ou `mobile`): cada perfil fecha só as suas lacunas e
+escreve só a sua subseção de `## Abordagem técnica` (`### Escopo Fullstack (API/Web)` /
+`### Escopo Mobile`), sem apagar a do outro. O fluxo completo, em 8 passos, está no
+[`SKILL.md`](SKILL.md).
+
 ## Instalação
 
 ```bash
@@ -28,12 +33,21 @@ dentro desta pasta).
 uv sync --directory refinar-tecnicamente   # só na primeira vez, ou após atualizar dependências
 export $(grep -v '^#' refinar-tecnicamente/.env | xargs)
 
-uv run --directory refinar-tecnicamente refinar-tecnicamente ler-lacunas /caminho/absoluto/spec.md
+uv run --directory refinar-tecnicamente refinar-tecnicamente resolver-spec \
+  --demanda 13959 --raiz /caminho/absoluto/do/repositorio
+uv run --directory refinar-tecnicamente refinar-tecnicamente resolver-spec \
+  --demanda 13959 --raiz /caminho/absoluto/do/repositorio --forcar-remoto
+uv run --directory refinar-tecnicamente refinar-tecnicamente ler-lacunas \
+  /caminho/absoluto/spec.md --perfil fullstack   # ou mobile; sem --perfil devolve todas
 uv run --directory refinar-tecnicamente refinar-tecnicamente sugerir-story-points \
   --area-path "Projeto\\Time A" --tipo "User Story" --tipo Bug
 uv run --directory refinar-tecnicamente refinar-tecnicamente gravar-spec-tecnica \
-  --demanda 13959 --spec /caminho/absoluto/spec.md
+  --demanda 13959 --spec /caminho/absoluto/spec.md --backlog /caminho/absoluto/backlog.md
 ```
+
+`resolver-spec` sozinho devolve a pasta local quando existe; `--forcar-remoto` baixa o anexo mais
+recente para `DN-<id>-<slug>.remoto/` (ignorada pelo git), sem tocar na local — é como uma sessão lê
+a subseção que o outro perfil publicou. `--backlog` é opcional em `gravar-spec-tecnica`.
 
 Os comandos acima assumem que você está na raiz do repositório `refinamento-planejamento-tecnico`;
 rodando já de dentro desta pasta, omita o prefixo `refinar-tecnicamente/` e o `--directory
