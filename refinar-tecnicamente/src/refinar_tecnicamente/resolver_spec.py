@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 _SUFIXO_REMOTO = ".remoto"
+_NOME_BACKLOG = "backlog.md"
 
 
 class _ClienteLeitura(Protocol):
@@ -119,7 +120,7 @@ def _baixar_e_materializar(
     # incompleta (só com spec.md) e a devolveria como resultado válido, sem nunca baixar o
     # backlog nem avisar ninguém. Por isso todos os downloads acontecem antes de criar a
     # pasta ou gravar qualquer arquivo.
-    backlog_bytes = cliente.baixar_anexo(id_demanda, "backlog.md")
+    backlog_bytes = cliente.baixar_anexo(id_demanda, _NOME_BACKLOG)
     if nome_base is None:
         work_item = cliente.ler_work_item(id_demanda)
         campos = work_item.get("fields")
@@ -130,8 +131,8 @@ def _baixar_e_materializar(
     destino.mkdir(parents=True, exist_ok=True)
     (destino / "spec.md").write_bytes(spec_bytes)
     if backlog_bytes is not None:
-        (destino / "backlog.md").write_bytes(backlog_bytes)
+        (destino / _NOME_BACKLOG).write_bytes(backlog_bytes)
     else:
         # Uma pasta `.remoto` reaproveitada não pode manter o backlog de um download anterior.
-        (destino / "backlog.md").unlink(missing_ok=True)
+        (destino / _NOME_BACKLOG).unlink(missing_ok=True)
     return destino

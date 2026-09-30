@@ -166,8 +166,9 @@ def test_resolver_spec_remoto_sem_pasta_local_usa_o_slug_do_titulo(tmp_path: Pat
 
 
 def test_resolver_spec_remoto_sem_anexo_recusa_com_mensagem_clara(tmp_path: Path) -> None:
+    cliente = ClienteFalso()
     with pytest.raises(ErroSpecNaoEncontrada, match="13959"):
-        resolver_spec_remoto(ClienteFalso(), raiz=tmp_path, id_demanda=13959)
+        resolver_spec_remoto(cliente, raiz=tmp_path, id_demanda=13959)
 
 
 def test_resolver_spec_remoto_regrava_e_remove_backlog_obsoleto(tmp_path: Path) -> None:
