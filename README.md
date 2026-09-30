@@ -31,6 +31,96 @@ refinamento-planejamento-tecnico
 Cada skill é um pacote Python independente, instalável separadamente, que vendoriza sua própria cópia
 de um cliente HTTP mínimo para o Azure Boards. Nenhuma importa da outra.
 
+## Como usar na prática
+
+Você não roda os comandos à mão: chama a skill no seu agente (Claude Code, Cursor ou Codex), passando
+o **ID** do work item e, quando a skill pede, o **parâmetro**, e o agente conduz o resto — roda as
+CLIs, faz as perguntas e só grava depois da sua confirmação. No Claude Code a chamada é
+`/nome-da-skill <argumentos>`; nos outros agentes, escreva em linguagem natural ("use a skill
+`decompor-tasks` na História 4321"). Informar o ID e o parâmetro já na chamada evita que o agente
+pergunte de novo.
+
+| Skill | Qual ID passar | Parâmetro | Chamada |
+|---|---|---|---|
+| `refinar-tecnicamente` | **Demanda de Negócio** | perfil: `fullstack` ou `mobile` | `/refinar-tecnicamente 13959 fullstack` |
+| `decompor-tasks` | **História ou Bug** (nunca Task) | nenhum | `/decompor-tasks 4321` |
+| `preparar-implementacao` | **História, Bug ou Task** | nenhum | `/preparar-implementacao 4321` |
+
+Antes da primeira vez: instale as skills, preencha o `.env` de cada uma e rode `uv sync` (ver
+[Instalação e atualização](#instalação-e-atualização) e [Configuração](#configuração)). O agente
+exporta o `.env` da skill sozinho a cada sessão.
+
+### `refinar-tecnicamente` — ID da Demanda + perfil
+
+```text
+/refinar-tecnicamente 13959 fullstack
+/refinar-tecnicamente 13959 mobile
+```
+
+O que o agente faz, em ordem:
+
+1. **Resolve a spec pelo ID.** Usa `docs/specs/DN-13959-*/` se existir no repositório aberto; senão
+   baixa `spec.md` e `backlog.md` do anexo mais recente da Demanda. Se a Demanda não tem spec
+   publicada, para e avisa — não pede caminho.
+2. **Confirma o perfil.** Se você não escreveu `fullstack` ou `mobile` na chamada, pergunta. O perfil
+   decide quais lacunas você vê e qual subseção da abordagem você escreve. Se a Demanda passa pelos dois
+   perfis, são duas sessões separadas — uma chamada para cada.
+3. **Entrevista só as lacunas técnicas do seu perfil**, em rodadas. Você responde ou adia; nada é
+   fechado por inferência.
+4. **Baixa a versão remota** antes de escrever, para preservar a subseção que o outro perfil possa ter
+   publicado.
+5. **Investiga o código e escreve só a sua subseção** (`### Escopo Fullstack (API/Web)` ou
+   `### Escopo Mobile`) em `## Abordagem técnica`, citando `caminho:linha`.
+6. **Sugere Story Points** de cada História/Bug com base em itens fechados do mesmo Area Path. Sem
+   base, pergunta a você — nunca inventa.
+7. **Mostra a `spec.md` completa e pede a frase de autorização.** Só depois grava em
+   `Custom.DemandaSpecTecnica` e reanexa `spec.md`/`backlog.md` na Demanda. Copie a frase
+   **exatamente**; qualquer variação é recusada sem tocar no Azure Boards.
+
+### `decompor-tasks` — ID da História ou Bug
+
+```text
+/decompor-tasks 4321
+```
+
+1. Lê a História/Bug 4321, sobe até a Demanda e lê a abordagem técnica já registrada. **Se a
+   Demanda ainda não passou pelo `refinar-tecnicamente`, não há abordagem para decompor** — refine
+   primeiro.
+2. Propõe a lista de Tasks a partir da abordagem. Você ajusta, remove ou acrescenta.
+3. Para cada Task, busca horas em Tasks fechadas comparáveis. Sem base, pergunta a estimativa a você.
+4. Monta o plano, mostra completo e pede a frase de autorização. Só então cria as Tasks como filhas
+   da História/Bug, atribuídas a você (o usuário do PAT).
+
+Se a criação falhar no meio, chame a skill de novo: ela retoma do manifesto e não duplica Tasks. Se
+uma Task ficar marcada "em andamento" por timeout, a skill recusa continuar até você conferir no
+Azure Boards se ela foi criada.
+
+### `preparar-implementacao` — ID da História, Bug ou Task
+
+```text
+/preparar-implementacao 4321
+```
+
+1. Lê o item, sobe até a Demanda, lê a abordagem técnica e as Tasks irmãs com suas estimativas. Se
+   você passar o ID de uma Task, ela sobe sozinha até a História/Bug pai e avisa no topo do briefing.
+2. Verifica o mínimo: abordagem técnica, critério de aceitação e todas as Tasks estimadas. Se faltar
+   algo, **recusa montar o briefing** e diz exatamente o quê — volte para `refinar-tecnicamente` ou
+   `decompor-tasks`.
+3. Monta o briefing em Markdown. Não escreve nada no Azure Boards.
+4. Você leva o briefing ao `superpowers:brainstorming` e depois ao `superpowers:writing-plans` na
+   mesma sessão.
+
+### Ordem de uso
+
+`refinar-tecnicamente` (Demanda, uma vez por perfil) → `decompor-tasks` (cada História/Bug, por quem
+vai executar) → `preparar-implementacao` (ao começar a codar). Cada skill recusa quando falta o que a
+anterior produz.
+
+## Referência das CLIs
+
+Esta seção descreve os comandos que o agente roda por baixo. Só precisa dela para rodar uma etapa à
+mão ou diagnosticar um erro.
+
 ### Como rodar os comandos abaixo
 
 Não há binário instalado globalmente — cada skill roda dentro do seu próprio ambiente `uv`. Padrão
