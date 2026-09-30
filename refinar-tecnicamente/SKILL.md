@@ -1,6 +1,6 @@
 ---
 name: refinar-tecnicamente
-description: Use na reunião técnica de refinamento, sobre a spec.md de uma Demanda já publicada no Azure Boards, para fechar as lacunas técnicas, registrar a abordagem e estimar Story Points.
+description: Use na reunião técnica de refinamento, sobre a spec.md de uma Demanda já publicada no Azure Boards, para fechar as lacunas técnicas, registrar a abordagem e estimar Story Points. A sessão roda por perfil (fullstack ou mobile): cada perfil trata só as suas lacunas e escreve só a sua subseção da abordagem técnica.
 ---
 
 # Refinar tecnicamente uma Demanda já publicada
@@ -8,7 +8,7 @@ description: Use na reunião técnica de refinamento, sobre a spec.md de uma Dem
 ## Objetivo
 
 Fechar as lacunas rotuladas `Técnico` de `spec.md`, investigar o código e registrar a abordagem
-técnica como seção nova da spec, estimar Story Points de cada História/Bug do backlog associado —
+técnica como seção nova da spec — cada Demanda pode passar por duas sessões, uma por perfil (`fullstack` ou `mobile`), e cada sessão trata só as lacunas e escreve só a subseção do próprio perfil —, estimar Story Points de cada História/Bug do backlog associado —
 ancorado em itens fechados comparáveis, nunca inventado — e prender a spec atualizada à Demanda de
 Negócio via `Custom.DemandaSpecTecnica`.
 
