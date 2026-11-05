@@ -60,7 +60,7 @@ exporta o `.env` da skill sozinho a cada sessão.
 O que o agente faz, em ordem:
 
 1. **Resolve a spec pelo ID.** Usa `docs/specs/DN-13959-*/` se existir no repositório aberto; senão
-   baixa `spec.md` e `backlog.md` do anexo mais recente da Demanda. Se a Demanda não tem spec
+   baixa `spec.md` e `backlog.md` do anexo mais recente da Demanda. Aceita também os nomes `DN-<n>-spec.md`, `spec-v<n>.md`, `backlog-v<n>.md` etc. Se a Demanda não tem spec
    publicada, para e avisa — não pede caminho.
 2. **Confirma o perfil.** Se você não escreveu `fullstack` ou `mobile` na chamada, pergunta. O perfil
    decide quais lacunas você vê e qual subseção da abordagem você escreve. Se a Demanda passa pelos dois

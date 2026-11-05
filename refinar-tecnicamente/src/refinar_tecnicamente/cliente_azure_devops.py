@@ -9,6 +9,7 @@ pacote. Ressincronize manualmente se o padrão de retentativa mudar em algum dos
 from __future__ import annotations
 
 import base64
+import re
 import time
 from typing import Any
 from urllib.parse import quote
@@ -31,6 +32,17 @@ class ErroFalhaTransitoria(RuntimeError):
 
 class ErroRespostaInvalida(RuntimeError):
     """A resposta remota não é JSON consumível ou não tem o formato esperado."""
+
+
+def _nome_corresponde(comment: object, nome_canonico: str) -> bool:
+    """`True` se o anexo é o `nome_canonico` (ex.: `spec.md`) ou uma variante aceita:
+    prefixo `DN-<n>-` e/ou sufixo de versão `-v<n>` antes da extensão — `DN-14-spec.md`,
+    `spec-v2.md`, `backlog-v1.md`. Qualquer outro nome é ignorado."""
+    if not isinstance(comment, str):
+        return False
+    base, _, extensao = nome_canonico.rpartition(".")
+    padrao = rf"(DN-\d+-)?{re.escape(base)}(-v\d+)?\.{re.escape(extensao)}"
+    return re.fullmatch(padrao, comment) is not None
 
 
 class ClienteAzureDevOps:
@@ -168,7 +180,7 @@ class ClienteAzureDevOps:
         """Baixa o conteúdo do anexo mais recente com esse nome, ou `None` se não houver nenhum.
 
         "Mais recente" é o último elemento de `relations` com `rel == "AttachedFile"` e
-        `attributes.comment == nome_arquivo` — o Azure Boards sempre acrescenta ao final da
+        `attributes.comment` que case com `nome_arquivo` (ver `_nome_corresponde`) — o Azure Boards sempre acrescenta ao final da
         lista (`path: "/relations/-"`), então a ordem da lista já reflete a ordem de anexo.
         """
         work_item = self.ler_work_item(work_item_id)
@@ -192,7 +204,9 @@ class ClienteAzureDevOps:
             if not isinstance(relacao, dict) or relacao.get("rel") != "AttachedFile":
                 continue
             atributos = relacao.get("attributes")
-            if not isinstance(atributos, dict) or atributos.get("comment") != nome_arquivo:
+            if not isinstance(atributos, dict) or not _nome_corresponde(
+                atributos.get("comment"), nome_arquivo
+            ):
                 continue
             url = relacao.get("url")
             if isinstance(url, str) and url:

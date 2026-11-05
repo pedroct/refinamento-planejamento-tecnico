@@ -422,3 +422,63 @@ def test_baixar_anexo_com_varios_do_mesmo_nome_pega_o_ultimo() -> None:
     with _cliente(httpx.MockTransport(handler)) as cliente:
         conteudo = cliente.baixar_anexo(5, "spec.md")
     assert conteudo == b"versao nova"
+
+
+@pytest.mark.parametrize(
+    ("canonico", "comment_anexado"),
+    [
+        ("spec.md", "DN-14-spec.md"),
+        ("spec.md", "spec-v2.md"),
+        ("spec.md", "DN-14-spec-v2.md"),
+        ("backlog.md", "backlog-v1.md"),
+        ("backlog.md", "DN-14-backlog.md"),
+    ],
+)
+def test_baixar_anexo_aceita_nome_com_prefixo_dn_e_sufixo_de_versao(
+    canonico: str, comment_anexado: str
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "attachments/alvo" in str(request.url):
+            return httpx.Response(200, content=b"achou")
+        return httpx.Response(
+            200,
+            json={
+                "id": 5,
+                "fields": {},
+                "relations": [
+                    {
+                        "rel": "AttachedFile",
+                        "url": "https://dev.azure.com/anexo/attachments/alvo",
+                        "attributes": {"comment": comment_anexado},
+                    }
+                ],
+            },
+        )
+
+    with _cliente(httpx.MockTransport(handler)) as cliente:
+        assert cliente.baixar_anexo(5, canonico) == b"achou"
+
+
+@pytest.mark.parametrize(
+    "comment_anexado",
+    ["spec.md.bak", "minha-spec.md", "DN-14-spec-final.md", "spec-v.md", "backlog-v1.md"],
+)
+def test_baixar_anexo_spec_nao_aceita_nomes_fora_do_padrao(comment_anexado: str) -> None:
+    handler = httpx.MockTransport(
+        lambda _req: httpx.Response(
+            200,
+            json={
+                "id": 5,
+                "fields": {},
+                "relations": [
+                    {
+                        "rel": "AttachedFile",
+                        "url": "https://dev.azure.com/anexo/attachments/x",
+                        "attributes": {"comment": comment_anexado},
+                    }
+                ],
+            },
+        )
+    )
+    with _cliente(handler) as cliente:
+        assert cliente.baixar_anexo(5, "spec.md") is None

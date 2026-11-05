@@ -17,7 +17,8 @@ Negócio via `Custom.DemandaSpecTecnica`.
 1. Receba o ID da Demanda no Azure Boards. Rode `resolver-spec --demanda <id> --raiz <raiz do
    repositório atualmente aberto>`: ele procura `docs/specs/DN-<id>-*/` sob essa raiz e, se não
    encontrar, baixa `spec.md`/`backlog.md` do anexo mais recente da própria Demanda e materializa
-   uma pasta local a partir deles. Use o caminho impresso em `stdout` nos passos seguintes. Se a
+   uma pasta local a partir deles. O anexo pode se chamar `spec.md`, `DN-<n>-spec.md` ou
+   `spec-v<n>.md` (idem para `backlog`); vale o último anexado. Use o caminho impresso em `stdout` nos passos seguintes. Se a
    CLI recusar (nem pasta local, nem anexo), pare e informe que a Demanda ainda não tem spec
    publicada — não peça o caminho manualmente, nem sugira rodar `gerador-hu` você mesmo.
 2. Antes de ler as lacunas, pergunte **qual o perfil de quem está conduzindo esta sessão**:
