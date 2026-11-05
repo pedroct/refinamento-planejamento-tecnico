@@ -180,7 +180,7 @@ class ClienteAzureDevOps:
         """Baixa o conteúdo do anexo mais recente com esse nome, ou `None` se não houver nenhum.
 
         "Mais recente" é o último elemento de `relations` com `rel == "AttachedFile"` e
-        `attributes.comment` que case com `nome_arquivo` (ver `_nome_corresponde`) — o Azure Boards sempre acrescenta ao final da
+        `attributes.name` (nome real do arquivo) ou `attributes.comment` que case com `nome_arquivo` (ver `_nome_corresponde`) — o Azure Boards sempre acrescenta ao final da
         lista (`path: "/relations/-"`), então a ordem da lista já reflete a ordem de anexo.
         """
         work_item = self.ler_work_item(work_item_id)
@@ -204,8 +204,9 @@ class ClienteAzureDevOps:
             if not isinstance(relacao, dict) or relacao.get("rel") != "AttachedFile":
                 continue
             atributos = relacao.get("attributes")
-            if not isinstance(atributos, dict) or not _nome_corresponde(
-                atributos.get("comment"), nome_arquivo
+            if not isinstance(atributos, dict) or not any(
+                _nome_corresponde(atributos.get(chave), nome_arquivo)
+                for chave in ("name", "comment")
             ):
                 continue
             url = relacao.get("url")

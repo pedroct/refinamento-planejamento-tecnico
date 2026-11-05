@@ -482,3 +482,40 @@ def test_baixar_anexo_spec_nao_aceita_nomes_fora_do_padrao(comment_anexado: str)
     )
     with _cliente(handler) as cliente:
         assert cliente.baixar_anexo(5, "spec.md") is None
+
+
+def _relacoes_com(atributos: dict[str, str]) -> httpx.MockTransport:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "attachments/alvo" in str(request.url):
+            return httpx.Response(200, content=b"achou")
+        return httpx.Response(
+            200,
+            json={
+                "id": 5,
+                "fields": {},
+                "relations": [
+                    {
+                        "rel": "AttachedFile",
+                        "url": "https://dev.azure.com/anexo/attachments/alvo",
+                        "attributes": atributos,
+                    }
+                ],
+            },
+        )
+
+    return httpx.MockTransport(handler)
+
+
+def test_baixar_anexo_usa_attributes_name_quando_nao_ha_comment() -> None:
+    with _cliente(_relacoes_com({"name": "DN-14-spec.md"})) as cliente:
+        assert cliente.baixar_anexo(5, "spec.md") == b"achou"
+
+
+def test_baixar_anexo_aceita_comment_ou_name_independente_um_do_outro() -> None:
+    with _cliente(_relacoes_com({"name": "x.bin", "comment": "spec.md"})) as cliente:
+        assert cliente.baixar_anexo(5, "spec.md") == b"achou"
+
+
+def test_baixar_anexo_ignora_name_fora_do_padrao_sem_comment() -> None:
+    with _cliente(_relacoes_com({"name": "outro.pdf"})) as cliente:
+        assert cliente.baixar_anexo(5, "spec.md") is None

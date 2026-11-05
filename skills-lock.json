@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "refinar-tecnicamente": {
+      "source": "pedroct/refinamento-planejamento-tecnico",
+      "sourceType": "github",
+      "skillPath": "refinar-tecnicamente/SKILL.md",
+      "computedHash": "1abc1b2e844f93d4648613fc0d86e621783f38c5081fba1cd5f971d3e2bbd071"
+    }
+  }
+}
