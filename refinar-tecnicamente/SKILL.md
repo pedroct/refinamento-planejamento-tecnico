@@ -1,6 +1,6 @@
 ---
 name: refinar-tecnicamente
-description: Use na reunião técnica de refinamento, sobre a spec.md de uma Demanda já publicada no Azure Boards, para fechar as lacunas técnicas, registrar a abordagem e estimar Story Points. A sessão roda por perfil (fullstack ou mobile): cada perfil trata só as suas lacunas e escreve só a sua subseção da abordagem técnica.
+description: "Use na reunião técnica de refinamento, sobre a spec.md de uma Demanda já publicada no Azure Boards, para fechar as lacunas técnicas, registrar a abordagem e estimar Story Points. A sessão roda por perfil (fullstack ou mobile): cada perfil trata só as suas lacunas e escreve só a sua subseção da abordagem técnica."
 ---
 
 # Refinar tecnicamente uma Demanda já publicada
